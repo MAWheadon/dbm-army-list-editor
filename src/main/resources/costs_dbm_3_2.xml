@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<costs rules="DBM" version="3.2">
+	<drill name="Reg">
+		<adjustments>
+			<adjustment name="ch" text="Chariots" cost="-1" />
+			<adjustment name="mtd" text="Mounted" cost="1" />
+			<adjustment name="rr" text="Rear rank" cost="-2" />
+			<adjustment name="gen" text="General" cost="20" />
+			<adjustment name="chgen" text="Chariot general" cost="19" />
+			<adjustment name="mtdgen" text="Mounted general" cost="21" />
+			<adjustment name="ally" text="Ally general" cost="10" />
+			<adjustment name="chally" text="Chariot ally general" cost="9" />
+			<adjustment name="mtdally" text="Mounted ally general" cost="11" />
+		</adjustments>
+		<types>
+			<type name="Kn">
+				<troop grade="S" ap="15" eq="1" adjs="ch,rr,gen,ally" />
+				<troop grade="O" ap="12" eq="1" adjs="ch,rr,gen,ally" />
+				<troop grade="I" ap="10" eq="1" adjs="rr,gen,ally" />
+				<troop grade="F" ap="11" eq="1" adjs="gen,ally" />
+				<troop grade="X" ap="13" eq="1" adjs="gen,ally" />
+			</type>
+			<type name="Cv">
+				<troop grade="S" ap="10" eq="1" adjs="ch,gen,ally" />
+				<troop grade="O" ap="8" eq="1" adjs="ch,rr,gen,ally" />
+				<troop grade="I" ap="6" eq="1" adjs="rr,gen,ally" />
+			</type>
+			<type name="Lh">
+				<troop grade="S" ap="7" eq="1" adjs="gen,ally" />
+				<troop grade="O" ap="5" eq="1" adjs="gen,ally" />
+				<troop grade="I" ap="3" eq="1" adjs="gen,ally" />
+				<troop grade="F" ap="4" eq="1" adjs="gen,ally" />
+			</type>
+			<type name="Sp">
+				<troop grade="S" ap="7" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="O" ap="5" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="I" ap="4" eq="1" adjs="gen,ally,mtd" />
+			</type>
+			<type name="Pk">
+				<troop grade="S" ap="5" eq="1" adjs="gen,ally" />
+				<troop grade="O" ap="4" eq="1" adjs="gen,ally" />
+				<troop grade="I" ap="3" eq="1" adjs="gen,ally" />
+				<troop grade="X" ap="4" eq="1" adjs="gen,ally" />
+			</type>
+			<type name="Bd">
+				<troop grade="S" ap="8" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="O" ap="6" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="I" ap="4" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="F" ap="6" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="X" ap="7" eq="1" adjs="gen,ally,mtd" />
+			</type>
+			<type name="Ax">
+				<troop grade="S" ap="4.5" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="O" ap="3.5" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="I" ap="2.5" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="X" ap="3.5" eq="1" adjs="gen,ally,mtd" />
+			</type>
+			<type name="Bw">
+				<troop grade="S" ap="7" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="O" ap="5" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="I" ap="4" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="X" ap="7" eq="1" adjs="gen,ally,mtd" />
+			</type>
+			<type name="Ps">
+				<troop grade="S" ap="3" eq="0.5" adjs="gen,ally,mtd" />
+				<troop grade="O" ap="2" eq="0.5" adjs="gen,ally,mtd" />
+				<troop grade="I" ap="1" eq="0.5" adjs="gen,ally" />
+				<troop grade="X" ap="6" eq="0.5" />
+			</type>
+			<type name="Art">
+				<troop grade="S" ap="10" eq="1" />
+				<troop grade="O" ap="8" eq="1" />
+				<troop grade="I" ap="4" eq="1" />
+				<troop grade="F" ap="10" eq="1" />
+				<troop grade="X" ap="5" eq="1" />
+			</type>
+			<type name="Wwg">
+				<troop grade="S" ap="14" eq="1" />
+				<troop grade="O" ap="10" eq="1" />
+				<troop grade="I" ap="3" eq="3" adjs="gen" />
+				<troop grade="X" ap="7" eq="1" />
+			</type>
+			<type name="Gal">
+				<troop grade="S" ap="4" eq="0" />
+				<troop grade="O" ap="3" eq="0" />
+				<troop grade="F" ap="2" eq="0" />
+			</type>
+			<type name="Bts">
+				<troop grade="F" ap="2" eq="0.5" />
+				<troop grade="X" ap="6" eq="0" />
+			</type>
+		</types>
+	</drill>
+	<drill name="Irr">
+		<adjustments>
+			<adjustment name="ch" text="Chariots" cost="-1" />
+			<adjustment name="mtd" text="Mounted" cost="1" />
+			<adjustment name="rr" text="Rear rank" cost="-1" />
+			<adjustment name="gen" text="General" cost="10" />
+			<adjustment name="chgen" text="Chariot general" cost="9" />
+			<adjustment name="mtdgen" text="Mounted general" cost="11" />
+			<adjustment name="ally" text="Ally" cost="5" />
+			<adjustment name="chally" text="Chariot ally general" cost="4" />
+			<adjustment name="mtdally" text="Mounted ally general" cost="6" />
+		</adjustments>
+		<types>
+			<type name="El">
+				<troop grade="S" ap="20" eq="1" adjs="gen" />
+				<troop grade="O" ap="16" eq="1" adjs="gen" />
+				<troop grade="I" ap="14" eq="1" adjs="gen" />
+				<troop grade="X" ap="22" eq="1" adjs="gen" />
+			</type>
+			<type name="Kn">
+				<troop grade="S" ap="12" eq="1" adjs="gen, ch" />
+				<troop grade="O" ap="10" eq="1" adjs="gen, ch" />
+				<troop grade="I" ap="8" eq="1" adjs="gen, ch, rr" />
+				<troop grade="F" ap="9" eq="1" adjs="gen" />
+				<troop grade="X" ap="11" eq="1" adjs="gen" />
+			</type>
+			<type name="Cv">
+				<troop grade="S" ap="9" eq="1" adjs="gen, ch, rr" />
+				<troop grade="O" ap="7" eq="1" adjs="gen, ch, rr" />
+				<troop grade="I" ap="5" eq="1" adjs="gen, ch, rr" />
+			</type>
+			<type name="Lh">
+				<troop grade="S" ap="7" eq="1" adjs="gen" />
+				<troop grade="O" ap="5" eq="1" adjs="gen" />
+				<troop grade="I" ap="3" eq="1" adjs="gen" />
+				<troop grade="F" ap="4" eq="1" adjs="gen" />
+			</type>
+			<type name="Cm">
+				<troop grade="S" ap="11" eq="1" adjs="gen" />
+				<troop grade="O" ap="6" eq="1" adjs="gen" />
+				<troop grade="I" ap="5" eq="1" adjs="gen" />
+				<troop grade="X" ap="9" eq="1" adjs="gen" />
+			</type>
+			<type name="Exp">
+				<troop grade="O" ap="7" eq="0" />
+			</type>
+			<type name="Sp">
+				<troop grade="O" ap="4" eq="1" adjs="gen, mtd, rr" />
+				<troop grade="I" ap="3" eq="1" adjs="gen, mtd, rr" />
+			</type>
+			<type name="Pk">
+				<troop grade="I" ap="3" eq="1" adjs="gen, mtd, rr" />
+				<troop grade="X" ap="4" eq="1" adjs="gen, mtd, rr" />
+			</type>
+			<type name="Bl">
+				<troop grade="S" ap="7" eq="1" adjs="gen, mtd, rr" />
+				<troop grade="O" ap="5" eq="1" adjs="gen, mtd, rr" />
+				<troop grade="I" ap="3" eq="1" adjs="gen, mtd, rr" />
+				<troop grade="F" ap="5" eq="1" adjs="gen, mtd, rr" />
+				<troop grade="X" ap="6" eq="1" adjs="gen, mtd, rr" />
+			</type>
+			<type name="Wb">
+				<troop grade="S" ap="5" eq="1" adjs="gen, mtd" />
+				<troop grade="O" ap="4" eq="1" adjs="gen, mtd" />
+				<troop grade="F" ap="3" eq="1" adjs="gen, mtd" />
+			</type>
+			<type name="Ax">
+				<troop grade="S" ap="4" eq="1" adjs="gen, mtd" />
+				<troop grade="O" ap="3" eq="1" adjs="gen, mtd" />
+				<troop grade="I" ap="2" eq="0.5" adjs="gen, mtd" />
+				<troop grade="F" ap="3" eq="1" adjs="gen, mtd" />
+			</type>
+			<type name="Bw">
+				<troop grade="S" ap="5" eq="1" adjs="gen, mtd, rr" />
+				<troop grade="O" ap="4" eq="1" adjs="gen, mtd, rr" />
+				<troop grade="I" ap="3" eq="1" adjs="gen, mtd, rr" />
+				<troop grade="X" ap="5" eq="1" adjs="gen, mtd, rr" />
+			</type>
+			<type name="Ps">
+				<troop grade="S" ap="3" eq="0.5" adjs="gen, mtd" />
+				<troop grade="O" ap="2" eq="0.5" adjs="gen, mtd" />
+				<troop grade="I" ap="1" eq="0.5" adjs="gen, mtd" />
+				<troop grade="X" ap="6" eq="0.5" adjs="gen, mtd" />
+			</type>
+			<type name="Wwg">
+				<troop grade="S" ap="10" eq="1" />
+				<troop grade="O" ap="8" eq="1" />
+				<troop grade="I" ap="2" eq="3" adjs="gen" />
+				<troop grade="X" ap="6" eq="1" />
+			</type>
+			<type name="Hd">
+				<troop grade="S" ap="2" eq="0.5" />
+				<troop grade="O" ap="1" eq="0.5" />
+				<troop grade="I" ap="0.5" eq="0" />
+				<troop grade="F" ap="1" eq="0.5" />
+			</type>
+			<type name="Bts">
+				<troop grade="S" ap="3" eq="0" />
+				<troop grade="O" ap="2" eq="0" />
+				<troop grade="I" ap="1" eq="0" />
+			</type>
+			<type name="Shp">
+				<troop grade="S" ap="4" eq="0" />
+				<troop grade="O" ap="3" eq="0" />
+				<troop grade="I" ap="2" eq="0" />
+				<troop grade="X" ap="6" eq="0" />
+			</type>
+		</types>
+	</drill>
+	<drill name="Fort">
+		<adjustments>
+			<adjustment name="bua" text="BUA" cost="-1" />
+			<adjustment name="camp" text="Camp" cost="-1" />
+			<adjustment name="twr" text="Tower" cost="1" />
+			<adjustment name="gtwy" text="Gateway" cost="2" />
+		</adjustments>
+		<types>
+			<type name="TF">
+				<troop grade="n/a" ap="2" eq="0"  adjs="bua, camp" />
+			</type>
+			<type name="PF">
+				<troop grade="n/a" ap="2" eq="0"  adjs="twr, gtwy" />
+			</type>
+		</types>
+	</drill>
+</costs>
