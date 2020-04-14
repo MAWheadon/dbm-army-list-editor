@@ -4,27 +4,21 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.logging.Level;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
 import javax.xml.transform.TransformerException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-import com.maw.armylistdesigner.ArmyListConstants;
-import com.maw.util.WLog;
-
 /** A DBM army list.
- * 
+ *
  * @author Mark Andrew Wheadon
  * @date 9th June 2012.
  * @copyright Mark Andrew Wheadon, 2012,2019.
@@ -33,6 +27,7 @@ import com.maw.util.WLog;
 public class ArmyListDBMModel {
 	private static final int CMDS = 4;
 	public enum ColumnNames {QUANTITY, DESCRIPTION, DRILL, TYPE, GRADE, ADJUSTMENT1, COST, TOTAL, CMD1_QTY, CMD2_QTY, CMD3_QTY, CMD4_QTY, UNUSED}
+	private static final Logger log = LoggerFactory.getLogger(ArmyListDBMModel.class);
 
 	private class Row {
 		private int mQty;
@@ -58,7 +53,7 @@ public class ArmyListDBMModel {
 	private String mArmyBook;
 	private String mArmyYear;
 	private String mArmyCostsFileName;
-	
+
 	// Calculated values not to be saved.
 	private ArmyListCosts mCosts;
 	private int mTotalElements;
@@ -105,6 +100,8 @@ public class ArmyListDBMModel {
 
 	//--------------------------------------------------------------------------
 	/** Inserts a blank row.
+	 * @param index The nought based row number.
+	 * @param above True to add above the desired row.
 	 * @return The index of the row just added. */
 	public int addRow(int index, boolean above) {
 		Row row = new Row();
@@ -185,7 +182,7 @@ public class ArmyListDBMModel {
 
 	//--------------------------------------------------------------------------
 	/** Gets a quantity for the row.
-	 * @param row 0 based row index.
+	 * @param rowIndex The nought based row number.
 	 * @return The number of elements. */
 	public int getRowQuantity(int rowIndex) {
 		Row row = mRows.get(rowIndex);
@@ -193,9 +190,9 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Sets a quantity.
-	 * @param row 0 based row index.
-	 * @param 1-4 = for specific command.
+	/** Sets a quantity of troops for a command.
+	 * @param rowIndex The nought based row number.
+	 * @param command The 1 based command number (1-4).
 	 * @param quantity The number of elements. */
 	public void setCommandQuantity(int rowIndex, int command, int quantity) {
 		Row row = mRows.get(rowIndex);
@@ -204,9 +201,9 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Gets a quantity.
-	 * @param row 0 based row index.
-	 * @param 1-4 = for specific command.
+	/** Gets a quantity of troops of a command.
+	 * @param rowIndex The nought based row number.
+	 * @param command The 1 based command number (1-4).
 	 * @return The number of elements. */
 	public int getCommandQuantity(int rowIndex, int command) {
 		Row row = mRows.get(rowIndex);
@@ -214,8 +211,8 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Sets a troop description
-	 * @param row 0 based row index, perhaps returned from addRow.
+	/** Sets a troop's description
+	 * @param rowIndex The nought based row number.
 	 * @param description The description, e.g. Companions. */
 	public void setDescription(int rowIndex, String description) {
 		Row row = mRows.get(rowIndex);
@@ -223,8 +220,8 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Gets a troop description
-	 * @param row 0 based row index, perhaps returned from addRow.
+	/** Gets a troop's description
+	 * @param rowIndex The nought based row number.
 	 * @return The description, e.g. Companions. */
 	public String getDescription(int rowIndex) {
 		Row row = mRows.get(rowIndex);
@@ -232,8 +229,8 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Sets a drill.
-	 * @param row 0 based row index, perhaps returned from addRow.
+	/** Sets the troop's drill.
+	 * @param rowIndex The nought based row number.
 	 * @param drill The drill e.g. Irr, Reg, Fort. */
 	public void setDrill(int rowIndex, String drill) {
 		Row row = mRows.get(rowIndex);
@@ -242,8 +239,8 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Gets a drill.
-	 * @param row 0 based row index, perhaps returned from addRow.
+	/** Gets the troop's drill.
+	 * @param rowIndex The nought based row number.
 	 * @return The drill e.g. Irr, Reg, Fort. */
 	public String setDrill(int rowIndex) {
 		Row row = mRows.get(rowIndex);
@@ -251,8 +248,8 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Sets a type.
-	 * @param row 0 based row index, perhaps returned from addRow.
+	/** Sets the troop's type.
+	 * @param rowIndex The nought based row number.
 	 * @param type The type e.g. Kn, Cv, Pk, Bl */
 	public void setType(int rowIndex, String type) {
 		Row row = mRows.get(rowIndex);
@@ -261,8 +258,8 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Gets a type.
-	 * @param row 0 based row index, perhaps returned from addRow.
+	/** Gets the troops's type.
+	 * @param rowIndex The nought based row number.
 	 * @return The type e.g. Kn, Cv, Pk, Bl */
 	public String setType(int rowIndex) {
 		Row row = mRows.get(rowIndex);
@@ -270,8 +267,8 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Sets a grade.
-	 * @param row 0 based row index, perhaps returned from addRow.
+	/** Sets the troops's grade.
+	 * @param rowIndex The nought based row number.
 	 * @param grade The grade e.g. S, O, I, F, X. */
 	public void setGrade(int rowIndex, String grade) {
 		Row row = mRows.get(rowIndex);
@@ -280,8 +277,8 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Gets a grade.
-	 * @param row 0 based row index, perhaps returned from addRow.
+	/** Gets the troops's grade.
+	 * @param rowIndex The nought based row number.
 	 * @return The grade e.g. S, O, I, F, X. */
 	public String getGrade(int rowIndex) {
 		Row row = mRows.get(rowIndex);
@@ -289,17 +286,17 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Sets an adjustment.
-	 * @param row 0 based row index, perhaps returned from addRow.
-	 * @param adjustment_csv The adjustment e.g. "Ally general, Chariot". */
+	/** Sets the troop's adjustment.
+	 * @param rowIndex The nought based row number.
+	 * @param adjustment The adjustment e.g. "Ally general, Chariot". */
 	public void setAdjustment(int rowIndex, String adjustment) {
 		Row row = mRows.get(rowIndex);
 		row.mAdjustment = adjustment;
 	}
 
 	//--------------------------------------------------------------------------
-	/** Gets an adjustment.
-	 * @param row 0 based row index, perhaps returned from addRow.
+	/** Gets the troop's adjustment.
+	 * @param rowIndex The nought based row number.
 	 * @return The adjustment e.g. "Ally general, Chariot". */
 	public String getAdjustment(int rowIndex) {
 		Row row = mRows.get(rowIndex);
@@ -308,7 +305,7 @@ public class ArmyListDBMModel {
 
 	//--------------------------------------------------------------------------
 	/** Sets unused element quantity which is the quantity on the row minus those allocated to each command.
-	 * @param row 0 based row index, perhaps returned from addRow.
+	 * @param rowIndex The nought based row number.
 	 * @param unused The number of unused elements. */
 	public void setUnusedQuantity(int rowIndex, int unused) {
 		Row row = mRows.get(rowIndex);
@@ -317,7 +314,7 @@ public class ArmyListDBMModel {
 
 	//--------------------------------------------------------------------------
 	/** Gets unused element quantity which is the quantity on the row minus those allocated to each command.
-	 * @param row 0 based row index, perhaps returned from addRow.
+	 * @param rowIndex The nought based row number.
 	 * @return The number of unused elements. */
 	public int  getUnusedQuantity(int rowIndex) {
 		Row row = mRows.get(rowIndex);
@@ -325,11 +322,12 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Returns a string of XML representing the army in stored format. 
-	 * @return XML.	 
-	 * @throws FileNotFoundException 
-	 * @throws XMLStreamException 
-	 * @throws ParserConfigurationException 
+	/** Returns a string of XML representing the army in stored format.
+	 * @param pathName The path name to be used to save the file.
+	 * @return XML.
+	 * @throws FileNotFoundException
+	 * @throws XMLStreamException
+	 * @throws ParserConfigurationException
 	 * @throws TransformerException */
 	public void saveXML(String pathName) throws FileNotFoundException, XMLStreamException {
             XMLOutputFactory factory = XMLOutputFactory.newFactory();
@@ -342,7 +340,7 @@ public class ArmyListDBMModel {
             writer.writeAttribute("id", Integer.toString(mArmyId));
             writer.writeAttribute("name", mArmyName);
             writer.writeAttribute("year", mArmyYear);
-            
+
             writer.writeStartElement("rows");
             for (Row row : mRows) {
                 writer.writeStartElement("row");
@@ -359,7 +357,7 @@ public class ArmyListDBMModel {
                 writer.writeEndElement();	// row
             }
             writer.writeEndElement();	// rows
- 
+
             writer.writeEndElement();	// army
             writer.writeEndDocument();
             writer.close();
@@ -377,7 +375,7 @@ public class ArmyListDBMModel {
 			Document doc = db.parse(xml);
 			NodeList armyNodes = doc.getElementsByTagName("army"); // should only be one
 			int count = armyNodes.getLength();
-			WLog.log(Level.INFO, "There are {0} army nodes. There should be 1.", count);
+			log.info("There are {} army nodes. There should be 1.", count);
 			Element armyNode = (Element) armyNodes.item(0);
 			String ids = armyNode.getAttribute("id");
 			mArmyId = Integer.parseInt(ids);
@@ -388,7 +386,7 @@ public class ArmyListDBMModel {
 			mRows.clear();
 			NodeList rowNodes = doc.getElementsByTagName("row");
 			count = rowNodes.getLength();
-			WLog.log(Level.INFO, "There are {0} rows.", count);
+			log.info("There are {} rows.", count);
 			for (int rr = 0; rr < count; rr++) {
 				Element rowNode = (Element) armyNodes.item(rr);
 				Row row = new Row();
@@ -403,12 +401,12 @@ public class ArmyListDBMModel {
 				row.mCmdQty[2] = getAttributeAsInt(rowNode, ArmyListConstants.ROW_CMD3_QTY);
 				row.mCmdQty[3] = getAttributeAsInt(rowNode, ArmyListConstants.ROW_CMD4_QTY);
 				mRows.add(row);
-				WLog.log(Level.INFO, "Added row {0}.", row.toString());
+				log.info("Added row {}.", row.toString());
 			}
 		}
 		catch (Exception e) {
-			WLog.log(Level.SEVERE, "Error loading army from XML.", e);
-		} 
+			log.warn("Error loading army from XML.", e);
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -422,7 +420,7 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Returns a plain text version of the army list for basic printing or 
+	/** Returns a plain text version of the army list for basic printing or
 	 * emailing or whatever else may be required. */
 	public String getAsPlainText() {
 		StringBuilder sb = new StringBuilder();
@@ -594,7 +592,7 @@ public class ArmyListDBMModel {
 			mTotals[ii].mElementEquivalents = roundUpToNearestHalf(mTotals[ii].mElementEquivalents / 3f);
 		}	// for - reset all command totals
 	}
-	
+
 	//--------------------------------------------------------------------------
 	public static void main(String argv[]) {
 		// some tests
