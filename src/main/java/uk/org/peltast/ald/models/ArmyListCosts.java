@@ -25,16 +25,17 @@ import org.xml.sax.helpers.DefaultHandler;
  * 
  * @author Mark Andrew Wheadon
  * @date 6th November 2012.
- * @copyright Mark Andrew Wheadon, 2012,2019.
+ * @copyright Mark Andrew Wheadon, 2012,2020.
  * @licence MIT License.
  */
 class ArmyListCosts {
-	private enum NodeNames {costs,drill,adjustments, adjustment,types,type,troop};
-	private enum AttributeNames {rules,version,name,text,cost,grade,ap,eq,adjs};
+	private enum NodeNames {costs, drill, adjustments, adjustment, types, type, troop};
+	private enum AttributeNames {rules, version, name, text, cost, grade, ap, eq, adjs};
 	private Costs mCosts;
 	private List<String> mBooks = new ArrayList<>();	// the 4 DBM army list books
 
 	//--------------------------------------------------------------------------
+	/** Internal representation of a costs file. */
 	private class Costs {
 		private final String mRules;
 		private final String mVersion;
@@ -71,6 +72,8 @@ class ArmyListCosts {
 	}
 
 	//--------------------------------------------------------------------------
+	/** Combining grade, cost, element equivalents and any adjustments. Entries
+	 * of Troop make up a specific army. */
 	private class Troop {
 		private final String mGrade;
 		private final float mArmyPoints;
@@ -102,6 +105,7 @@ class ArmyListCosts {
 	}
 
 	//--------------------------------------------------------------------------
+	/** Kn, Cv, El, etc. */
 	private class Type {
 		private final String mName;
 		private final List<Troop> mTroops = new ArrayList<>();
@@ -125,6 +129,11 @@ class ArmyListCosts {
 	}
 
 	//--------------------------------------------------------------------------
+	/** Various adjustments might be allowed for a specific troop type such as
+	 * being a general, or mounted. Only one adjustment is allowed for a troop
+	 * entry. Troop types might be allowed more than one but here they are 
+	 * combined so that oinly one entry is needed, for example a foot ally 
+	 * general who is mounted is 'Mounted Ally General'. */
 	private class Adjustment {
 		private final String mName;
 		private final String mText;
@@ -150,6 +159,7 @@ class ArmyListCosts {
 	}
 
 	//--------------------------------------------------------------------------
+	/** Regular, Irregular or Fort. */
 	private class Drill {
 		private final String mName;
 		private final Map<String,Adjustment> mAdjustments = new LinkedHashMap<>();

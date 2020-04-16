@@ -4,35 +4,34 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.logging.Level;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import javax.xml.transform.TransformerException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-
-import com.maw.armylistdesigner.ArmyListConstants;
-import com.maw.util.WLog;
 
 /** A DBM army list.
  * 
  * @author Mark Andrew Wheadon
  * @date 9th June 2012.
- * @copyright Mark Andrew Wheadon, 2012,2019.
+ * @copyright Mark Andrew Wheadon, 2012,2020.
  * @licence MIT License.
  */
 public class ArmyListDBMModel {
+	private static Logger log = LoggerFactory.getLogger(ArmyListDBMModel.class);
 	private static final int CMDS = 4;
-	public enum ColumnNames {QUANTITY, DESCRIPTION, DRILL, TYPE, GRADE, ADJUSTMENT1, COST, TOTAL, CMD1_QTY, CMD2_QTY, CMD3_QTY, CMD4_QTY, UNUSED}
+	public enum ColumnNames {QUANTITY, DESCRIPTION, DRILL, TYPE, GRADE, ADJUSTMENT, COST, TOTAL, CMD1_QTY, CMD2_QTY, CMD3_QTY, CMD4_QTY, UNUSED}
+	private enum AttributeNames{army, book, costFileName, id, name, year, rows, row, quantity, description, drill, type, grade, adjustment, cmdQty0, cmdQty1, cmdQty2, cmdQty3}
 
 	private class Row {
 		private int mQty;
@@ -52,21 +51,22 @@ public class ArmyListDBMModel {
 			return(ss);
 		}
 	}
-	private ArrayList<Row> mRows = new ArrayList<>();
+	private final ArrayList<Row> mRows = new ArrayList<>();
 	private int mArmyId	;	// used to save the file and in the directory
 	private String mArmyName;
 	private String mArmyBook;
 	private String mArmyYear;
 	private String mArmyCostsFileName;
+	private ArmyListCosts mCosts;
 	
 	// Calculated values not to be saved.
-	private ArmyListCosts mCosts;
-	private int mTotalElements;
-	private float mTotalElementEquivalents;
-	private float mTotalCost;
-	private int[] mTotalElementsByCmd = new int[CMDS];
-	private float[] mTotalElementEquivalentsByCmd = new float[CMDS];
-	private float[] mTotalCostByCmd = new float[CMDS];
+	private int mArmyElements;
+	private float mArmyElementEquivalents;
+	private float mArmyCost;
+	private int[] mCmdElements = new int[CMDS];
+	private float[] mCmdElementEquivalents = new float[CMDS];
+	private float[] mCmdBreakPoint = new float[CMDS];
+	private float[] mCmdCost = new float[CMDS];
 
 	//--------------------------------------------------------------------------
 	public ArmyListDBMModel() {
@@ -170,7 +170,7 @@ public class ArmyListDBMModel {
 
 	//--------------------------------------------------------------------------
 	public float getArmyTotalCost() {
-		return(mTotalCost);
+		return(mArmyCost);
 	}
 
 	//--------------------------------------------------------------------------
@@ -195,7 +195,7 @@ public class ArmyListDBMModel {
 	//--------------------------------------------------------------------------
 	/** Sets a quantity.
 	 * @param row 0 based row index.
-	 * @param 1-4 = for specific command.
+	 * @param command 1-4 = for specific command.
 	 * @param quantity The number of elements. */
 	public void setCommandQuantity(int rowIndex, int command, int quantity) {
 		Row row = mRows.get(rowIndex);
@@ -210,6 +210,15 @@ public class ArmyListDBMModel {
 	 * @return The number of elements. */
 	public int getCommandQuantity(int rowIndex, int command) {
 		Row row = mRows.get(rowIndex);
+		return(row.mCmdQty[command-1]);
+	}
+
+	//--------------------------------------------------------------------------
+	/** Gets a quantity.
+	 * @param row the row.
+	 * @param 1-4 = for specific command.
+	 * @return The number of elements. */
+	public int getCommandQuantity(Row row, int command) {
 		return(row.mCmdQty[command-1]);
 	}
 
@@ -245,7 +254,7 @@ public class ArmyListDBMModel {
 	/** Gets a drill.
 	 * @param row 0 based row index, perhaps returned from addRow.
 	 * @return The drill e.g. Irr, Reg, Fort. */
-	public String setDrill(int rowIndex) {
+	public String getDrill(int rowIndex) {
 		Row row = mRows.get(rowIndex);
 		return(row.mDrillName);
 	}
@@ -264,7 +273,7 @@ public class ArmyListDBMModel {
 	/** Gets a type.
 	 * @param row 0 based row index, perhaps returned from addRow.
 	 * @return The type e.g. Kn, Cv, Pk, Bl */
-	public String setType(int rowIndex) {
+	public String getType(int rowIndex) {
 		Row row = mRows.get(rowIndex);
 		return(row.mTypeName);
 	}
@@ -336,26 +345,26 @@ public class ArmyListDBMModel {
             FileOutputStream fos = new FileOutputStream(pathName);
             XMLStreamWriter writer = factory.createXMLStreamWriter(fos);
             writer.writeStartDocument();
-            writer.writeStartElement("army");
-            writer.writeAttribute("book", mArmyBook);
-            writer.writeAttribute("costFileName", mArmyCostsFileName);
-            writer.writeAttribute("id", Integer.toString(mArmyId));
-            writer.writeAttribute("name", mArmyName);
-            writer.writeAttribute("year", mArmyYear);
+            writer.writeStartElement(AttributeNames.army.toString());
+            writer.writeAttribute(AttributeNames.book.toString(), mArmyBook);
+            writer.writeAttribute(AttributeNames.costFileName.toString(), mArmyCostsFileName);
+            writer.writeAttribute(AttributeNames.id.toString(), Integer.toString(mArmyId));
+            writer.writeAttribute(AttributeNames.name.toString(), mArmyName);
+            writer.writeAttribute(AttributeNames.year.toString(), mArmyYear);
             
-            writer.writeStartElement("rows");
+            writer.writeStartElement(AttributeNames.rows.toString());
             for (Row row : mRows) {
-                writer.writeStartElement("row");
-                writer.writeAttribute("year", Integer.toString(row.mQty));
-                writer.writeAttribute("description", row.mDesc);
-                writer.writeAttribute("drill", row.mDrillName);
-                writer.writeAttribute("type", row.mTypeName);
-                writer.writeAttribute("grade", row.mGradeName);
-                writer.writeAttribute("adjustment", row.mAdjustment);
-                writer.writeAttribute("cmdQty0", Integer.toString(row.mCmdQty[0]));
-                writer.writeAttribute("cmdQty1", Integer.toString(row.mCmdQty[1]));
-                writer.writeAttribute("cmdQty2", Integer.toString(row.mCmdQty[2]));
-                writer.writeAttribute("cmdQty3", Integer.toString(row.mCmdQty[3]));
+                writer.writeStartElement(AttributeNames.row.toString());
+                writer.writeAttribute(AttributeNames.quantity.toString(), Integer.toString(row.mQty));
+                writer.writeAttribute(AttributeNames.description.toString(), row.mDesc);
+                writer.writeAttribute(AttributeNames.drill.toString(), row.mDrillName);
+                writer.writeAttribute(AttributeNames.type.toString(), row.mTypeName);
+                writer.writeAttribute(AttributeNames.grade.toString(), row.mGradeName);
+                writer.writeAttribute(AttributeNames.adjustment.toString(), row.mAdjustment);
+                writer.writeAttribute(AttributeNames.cmdQty0.toString(), Integer.toString(row.mCmdQty[0]));
+                writer.writeAttribute(AttributeNames.cmdQty1.toString(), Integer.toString(row.mCmdQty[1]));
+                writer.writeAttribute(AttributeNames.cmdQty2.toString(), Integer.toString(row.mCmdQty[2]));
+                writer.writeAttribute(AttributeNames.cmdQty3.toString(), Integer.toString(row.mCmdQty[3]));
                 writer.writeEndElement();	// row
             }
             writer.writeEndElement();	// rows
@@ -375,39 +384,39 @@ public class ArmyListDBMModel {
 			dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
 			DocumentBuilder db = dbf.newDocumentBuilder();
 			Document doc = db.parse(xml);
-			NodeList armyNodes = doc.getElementsByTagName("army"); // should only be one
+			NodeList armyNodes = doc.getElementsByTagName(AttributeNames.army.toString()); // should only be one
 			int count = armyNodes.getLength();
-			WLog.log(Level.INFO, "There are {0} army nodes. There should be 1.", count);
+			log.info("There are {} army nodes. There should be 1.", count);
 			Element armyNode = (Element) armyNodes.item(0);
 			String ids = armyNode.getAttribute("id");
 			mArmyId = Integer.parseInt(ids);
-			mArmyName = armyNode.getAttribute("name");
-			mArmyBook = armyNode.getAttribute("book");
-			mArmyYear = armyNode.getAttribute("year");
+			mArmyName = armyNode.getAttribute(AttributeNames.name.toString());
+			mArmyBook = armyNode.getAttribute(AttributeNames.book.toString());
+			mArmyYear = armyNode.getAttribute(AttributeNames.year.toString());
 
 			mRows.clear();
-			NodeList rowNodes = doc.getElementsByTagName("row");
+			NodeList rowNodes = doc.getElementsByTagName(AttributeNames.row.toString());
 			count = rowNodes.getLength();
-			WLog.log(Level.INFO, "There are {0} rows.", count);
+			log.info("There are {} rows.", count);
 			for (int rr = 0; rr < count; rr++) {
 				Element rowNode = (Element) armyNodes.item(rr);
 				Row row = new Row();
-				row.mQty = getAttributeAsInt(rowNode, ArmyListConstants.QTY);
-				row.mDesc = rowNode.getAttribute(ArmyListConstants.DESC);
-				row.mDrillName = rowNode.getAttribute(ArmyListConstants.DRILL);
-				row.mTypeName = rowNode.getAttribute(ArmyListConstants.TYPE);
-				row.mGradeName = rowNode.getAttribute(ArmyListConstants.GRADE);
-				row.mAdjustment = rowNode.getAttribute(ArmyListConstants.ADJUSTMENT);
-				row.mCmdQty[0] = getAttributeAsInt(rowNode, ArmyListConstants.ROW_CMD1_QTY);
-				row.mCmdQty[1] = getAttributeAsInt(rowNode, ArmyListConstants.ROW_CMD2_QTY);
-				row.mCmdQty[2] = getAttributeAsInt(rowNode, ArmyListConstants.ROW_CMD3_QTY);
-				row.mCmdQty[3] = getAttributeAsInt(rowNode, ArmyListConstants.ROW_CMD4_QTY);
+				row.mQty = getAttributeAsInt(rowNode, AttributeNames.quantity.toString());
+				row.mDesc = rowNode.getAttribute(AttributeNames.description.toString());
+				row.mDrillName = rowNode.getAttribute(AttributeNames.drill.toString());
+				row.mTypeName = rowNode.getAttribute(AttributeNames.type.toString());
+				row.mGradeName = rowNode.getAttribute(AttributeNames.grade.toString());
+				row.mAdjustment = rowNode.getAttribute(AttributeNames.adjustment.toString());
+				row.mCmdQty[0] = getAttributeAsInt(rowNode, AttributeNames.cmdQty0.toString());
+				row.mCmdQty[1] = getAttributeAsInt(rowNode, AttributeNames.cmdQty1.toString());
+				row.mCmdQty[2] = getAttributeAsInt(rowNode, AttributeNames.cmdQty2.toString());
+				row.mCmdQty[3] = getAttributeAsInt(rowNode, AttributeNames.cmdQty3.toString());
 				mRows.add(row);
-				WLog.log(Level.INFO, "Added row {0}.", row.toString());
+				log.info("Added row {}.", row.toString());
 			}
 		}
 		catch (Exception e) {
-			WLog.log(Level.SEVERE, "Error loading army from XML.", e);
+			log.warn("Error loading army from XML.", e);
 		} 
 	}
 
@@ -437,11 +446,10 @@ public class ArmyListDBMModel {
 		for (Row row : mRows) {
 			double el_cost = mCosts.getTroopCost(row.mDrillName,row.mTypeName,row.mGradeName);
 			double line_cost = mCosts.getLineCost(row.mDrillName,row.mTypeName,row.mGradeName,row.mAdjustment, row.mQty);
-	        //DecimalFormat df = new DecimalFormat( "###" );
-	        String cmd1 = nbrOrSpaces(getRowQuantity(row,1),3);
-	        String cmd2 = nbrOrSpaces(getRowQuantity(row,2),3);
-	        String cmd3 = nbrOrSpaces(getRowQuantity(row,3),3);
-	        String cmd4 = nbrOrSpaces(getRowQuantity(row,4),3);
+	        String cmd1 = nbrOrSpaces(getCommandQuantity(row,1),3);
+	        String cmd2 = nbrOrSpaces(getCommandQuantity(row,2),3);
+	        String cmd3 = nbrOrSpaces(getCommandQuantity(row,3),3);
+	        String cmd4 = nbrOrSpaces(getCommandQuantity(row,4),3);
 	        StringBuilder sb2 = new StringBuilder();
 	        sb2.append(row.mDrillName);
 	        sb2.append(' ');
@@ -488,14 +496,15 @@ public class ArmyListDBMModel {
 	/** For printing.
 	 * @param val A number.
 	 * @param width The width of the result in characters.
-	 * @return If the number is 0 then the width number of spaces, otherwise the number */
-	private String nbrOrSpaces(float val, int width) {
-		if (val != 0) {
-			return(Float.toString(val));
-		}	// if
+	 * @return If the number is 0 then the width number of spaces, otherwise the number right justified. */
+	private String nbrOrSpaces(Number nbr, int width) {
 		StringBuilder sb = new StringBuilder();
-		for (int ii=0; ii<width; ii++) {
-			sb.append(' ');
+		int ww = 0;
+		if (nbr.doubleValue() != 0) {
+			sb.append(nbr);
+		}
+		for (int ii=ww; ii<width; ii++) {
+			sb.insert(0, ' ');	// left pad
 		}	// if
 		return(sb.toString());
 	}
@@ -519,7 +528,7 @@ public class ArmyListDBMModel {
 	private int getQuantityCommandTotal(int cmd) {
 		int qtyCmdTotal = 0;
 		for (Row row : mRows) {
-			float row_qty = getRowQuantity(row,cmd);
+			float row_qty = getCommandQuantity(row,cmd);
 			qtyCmdTotal += row_qty;
 		}
 		return(qtyCmdTotal);
@@ -603,8 +612,8 @@ public class ArmyListDBMModel {
 		aldm.setArmyBook("1");
 		aldm.setArmyYear("300BC");
 		int index = aldm.addRow();
-		aldm.setQuantity(index, 0, 1);
-		aldm.setQuantity(index, 1, 1);
+		aldm.setRowQuantity(index, 1);
+		aldm.setCommandQuantity(index, 1, 1);
 		aldm.setDescription(index, "General");
 		aldm.setDrill(index, "Irr");
 		aldm.setType(index, "Cv");
