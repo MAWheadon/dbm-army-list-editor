@@ -62,6 +62,7 @@ public class ArmyListDBMModel {
 	// Calculated values not to be saved.
 	private int mArmyElements;
 	private float mArmyElementEquivalents;
+	private float mArmyBreakPoint;
 	private float mArmyCost;
 	private int[] mCmdElements = new int[CMDS];
 	private float[] mCmdElementEquivalents = new float[CMDS];
@@ -569,29 +570,43 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Recalculates the 4 totals:
-	 * <li>Army total quantity</li>
+	private void resetAllTotals() {
+		mArmyElements  =0;
+		mArmyElementEquivalents = 0f;
+		mArmyBreakPoint = 0f;
+		mArmyCost = 0f;
+		for (int cc=0; cc< CMDS; cc++) {
+			mCmdElements[cc] = 0;
+			mCmdElementEquivalents[cc] = 0f;
+			mCmdBreakPoint[cc] = 0f;
+			mCmdCost[cc] = 0f;;
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	/** Recalculates these totals:
+	 * <ol>
+	 * <li>Army elements</li>
 	 * <li>Army element equivalents</li>
-	 * <li>Half the army</li>
-	 * <li>Army total cost</li> */
+	 * <li>Army break point (half the army equivalents)</li>
+	 * <li>Army cost</li>
+	 * <li>Command elements</li>
+	 * <li>Command equivalents</li>
+	 * <li>Command break point (third of the command equivalents)</li>
+	 * <li>Command cost</li>
+	 * </ol>
+	 * */
 	private void recalcTotals() {
-		mTotals[0].mElements = 0;
-		mTotals[0].mElementEquivalents = 0;
-		mArmyTotalCost = 0;
-		for (int ii=1; ii<=4; ii++) {
-			mTotals[ii].mElements = 0;
-			mTotals[ii].mElementEquivalents = 0;
-			mTotals[ii].mBreakPoint = 0;
-		}	// for - reset all command totals
-		int row_count = mRows.size();
-		for (int rr=0; rr<row_count; rr++) {
+		resetAllTotals();
+		int rowCount = mRows.size();
+		for (int rr=0; rr<rowCount; rr++) {
 			Row row = mRows.get(rr);
-			mTotals[0].mElements += row.mQty;
-			float cost = mCosts.getElementCost(row.mDrillName,row.mTypeName,row.mGradeName);
-			float adj = mCosts.getElementAdjustment(row.mDrillName,row.mTypeName,row.mGradeName,row.m_adj);
+			mArmyElements += row.mQty;
+			float cost = mCosts.getTroopCost(row.mDrillName,row.mTypeName,row.mGradeName);
+			float adj = mCosts.getElementAdjustment(row.mDrillName,row.mTypeName,row.mGradeName,row.mAdjustment);
 			cost += adj;
 			cost *= row.mQty;
-			mArmyTotalCost += cost;
+			mArmyCost += cost;
 			float eq = mCosts.getElementEquivalents(row.mDrillName,row.mTypeName,row.mGradeName);
 			eq *= row.mQty;
 			mTotals[0].mElementEquivalents += eq;
