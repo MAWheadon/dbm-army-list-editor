@@ -1,23 +1,35 @@
 package uk.org.peltast.ald.models;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /** Reads DBM cost files (proprietary format, though in XML) of the form 
- * "costs_dbm_x_y.yaml" where x and y are DBM rules versions (3.2 probably 
+ * "costs_dbm_x_y.yaml" where x and y are DBM rules versions (3.3 probably 
  * being the last).
  * Acknowledgements: De Bellis Multitudinis (DBM) is a set of wargames rules 
  * for ancient and medieval battles written by Phil Barker and Richard Bodley 
@@ -29,10 +41,10 @@ import org.xml.sax.helpers.DefaultHandler;
  * @licence MIT License.
  */
 class ArmyListCosts {
+	private static final Logger log = LoggerFactory.getLogger(ArmyListCosts.class);
 	private enum NodeNames {costs, drill, adjustments, adjustment, types, type, troop};
 	private enum AttributeNames {rules, version, name, text, cost, grade, ap, eq, adjs};
 	private Costs mCosts;
-	private List<String> mBooks = new ArrayList<>();	// the 4 DBM army list books
 
 	//--------------------------------------------------------------------------
 	/** Internal representation of a costs file. */
@@ -40,19 +52,18 @@ class ArmyListCosts {
 		private final String mRules;
 		private final String mVersion;
 		private final Map<String,Drill> mDrills = new LinkedHashMap<>();	// the whole costs file keyed by drill
-		
+
 		Costs(String rules, String version) {
 			mRules = rules;
 			mVersion = version;
 		}
-		
+
 		void addDrill(String drillName, Drill drill) {
 			mDrills.put(drillName, drill);
 		}
-		
+
 		//--------------------------------------------------------------------------
-		/** Return the drill by drill name. 
-		 * Not all drills have all types.
+		/** Return the drill by drill name. Not all drills have all types.
 		 * @param drillName Reg, Irr or Fort.
 		 * @return A Drill. */
 		private Drill getDrill(String drillName) {
@@ -79,7 +90,7 @@ class ArmyListCosts {
 		private final float mArmyPoints;
 		private final float mEquivalents;
 		private final String[] mAdjustments;
-		
+
 		Troop(String grade, float armyPoints, float equivalents, String[] adjustments) {
 			mGrade = grade;
 			mArmyPoints = armyPoints;
@@ -90,15 +101,15 @@ class ArmyListCosts {
 		String getGrade() {
 			return(mGrade);
 		}
-		
+
 		float getArmyPoints() {
 			return(mArmyPoints);
 		}
-		
+
 		float getEquivalents() {
 			return(mEquivalents);
 		}
-		
+
 		String[] getAdjustments() {
 			return(mAdjustments);
 		}
@@ -109,15 +120,15 @@ class ArmyListCosts {
 	private class Type {
 		private final String mName;
 		private final List<Troop> mTroops = new ArrayList<>();
-		
+
 		Type(String name) {
 			mName = name;
 		}
-		
+
 		void addTroop(Troop troop) {
 			mTroops.add(troop);
 		}
-		
+
 		Troop getTroop(String gradeName) {
 			for (Troop troop : mTroops) {
 				if (troop.mGrade.equals(gradeName)) {
@@ -132,27 +143,27 @@ class ArmyListCosts {
 	/** Various adjustments might be allowed for a specific troop type such as
 	 * being a general, or mounted. Only one adjustment is allowed for a troop
 	 * entry. Troop types might be allowed more than one but here they are 
-	 * combined so that oinly one entry is needed, for example a foot ally 
+	 * combined so that only one entry is needed, for example a foot ally 
 	 * general who is mounted is 'Mounted Ally General'. */
 	private class Adjustment {
 		private final String mName;
 		private final String mText;
 		private final float mCost;
-		
+
 		Adjustment(String name, String text, float cost) {
 			mName = name;
 			mText = text;
 			mCost = cost;
 		}
-		
+
 		String getName() {
 			return(mName);
 		}
-		
+
 		String getText() {
 			return(mText);
 		}
-		
+
 		float getCost() {
 			return(mCost);
 		}
@@ -164,15 +175,15 @@ class ArmyListCosts {
 		private final String mName;
 		private final Map<String,Adjustment> mAdjustments = new LinkedHashMap<>();
 		private final Map<String,Type> mTypes = new LinkedHashMap<>();
-		
+
 		Drill(String name) {
 			mName = name;
 		}
-		
+
 		void addAdjustment(String name, Adjustment adjustment) {
 			mAdjustments.put(name, adjustment);
 		}
-		
+
 		void addType(String name, Type type) {
 			mTypes.put(name, type);
 		}
@@ -180,7 +191,7 @@ class ArmyListCosts {
 		Adjustment getAdjustment(String adjustmentMnemonic) {
 			Adjustment adjustment = mAdjustments.get(adjustmentMnemonic);
 			if (adjustment == null) {
-				throw new IllegalArgumentException("Unknown adjustmenr mnemonic "+ adjustmentMnemonic);
+				throw new IllegalArgumentException("Unknown adjustment mnemonic "+ adjustmentMnemonic);
 			}
 			return(adjustment);
 		}
@@ -196,7 +207,7 @@ class ArmyListCosts {
 			float cost = adjustment.getCost();
 			return(cost);
 		}
-		
+
 		Type getType(String typeName) {
 			Type type = mTypes.get(typeName);
 			if (type == null) {
@@ -211,8 +222,8 @@ class ArmyListCosts {
 		private Drill mDrill;
 		private Type mType;
 
+		@Override
 		public void startElement(String uri, String localName,String qName, Attributes attributes) throws SAXException {
-			System.out.println("Start Element :" + qName);
 			NodeNames nodeName = NodeNames.valueOf(qName);
 			switch (nodeName) {
 				case costs :
@@ -267,27 +278,58 @@ class ArmyListCosts {
 	}
 
 	//--------------------------------------------------------------------------
-	ArmyListCosts(String costFileName) throws IOException {
-		loadCostFile(costFileName);
+	ArmyListCosts(String majorVersion, String minorVersion) throws ParserConfigurationException, SAXException, IOException {
+		String ver = MessageFormat.format("costs_dbm_{0}_{1}.xml", majorVersion, minorVersion);
+		loadCostFile(ver);
 	}
 
 	//--------------------------------------------------------------------------
-	void loadCostFile(String costFileName) {
-		try {
-			SAXParserFactory factory = SAXParserFactory.newInstance();
-			SAXParser saxParser = factory.newSAXParser();
-			XMLReader xmlReader = new XMLReader();
-			File inputFile = new File(costFileName);
-			saxParser.parse(costFileName, xmlReader);
+	private void loadCostFile(String costFileName) throws ParserConfigurationException, SAXException, IOException {
+		log.info("About to load costs file {}", costFileName);
+		SAXParserFactory factory = SAXParserFactory.newInstance();
+		SAXParser saxParser = factory.newSAXParser();
+		XMLReader xmlReader = new XMLReader();
+		try (InputStream is = ArmyListCosts.class.getClassLoader().getResourceAsStream(costFileName)) {
+			saxParser.parse(is, xmlReader);
 		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
+		log.info("Completed loading costs file {}", costFileName);
 	}
 
 	//--------------------------------------------------------------------------
-	List<String> getBooks() {
-		return(mBooks);
+	List<String> listAvailableVersions() throws URISyntaxException {
+		String regex1 = "^costs_dbm_\\d_\\d.xml$";
+		String regex2 = "\\d";
+		Pattern pattern1 = Pattern.compile(regex1);
+		Pattern pattern2 = Pattern.compile(regex2);
+		List<String> vers = new ArrayList<>();
+/*		
+		URL url = ArmyListCosts.class.getClassLoader().getResource(".");
+		log.info("Resource directory is {}", url);
+		Path path = Paths.get(url.toURI());
+		File dir = path.toFile();
+*/
+		File dir = new File("src/main/resources");
+		String[] names = dir.list();
+		log.info("Version files are {}", Arrays.asList(names));
+		for (String name : names) {
+			Matcher matcher1 = pattern1.matcher(name);
+			boolean matches = matcher1.matches();
+			if (matches) {
+				Matcher matcher2 = pattern2.matcher(name);
+				boolean found = matcher2.find();
+				if (found) {
+					String major = matcher2.group();
+					found = matcher2.find();
+					if (found) {
+						String minor = matcher2.group();
+						String majMin = major + "." + minor;
+						vers.add(majMin);
+					}
+				}
+			}
+		}
+		log.info("Available version are {}", vers);
+		return(vers);
 	}
 
 	//--------------------------------------------------------------------------
@@ -329,25 +371,14 @@ class ArmyListCosts {
 	}
 
 	//--------------------------------------------------------------------------
-	/** Gets the list of adjustments as mnemonics for a specific troop type.
-	 * @param drillName Reg, Irr, Fort
-	 * @param typeName
-	 * @param gradeName
-	 * @return The list of mnemonics. */
-	private String[] getTroopAdjustmentList(String drillName, String typeName, String gradeName) {
-		Drill drill = mCosts.getDrill(drillName);
-		Type type = drill.getType(typeName);
-		Troop troop = type.getTroop(gradeName);
-		String[] list = troop.getAdjustments();
-		return(list);
-	}
-
-	//--------------------------------------------------------------------------
 	/** Gets the name/text of the adjustment, e.g. General, Chariots
 	 * @param drillName Reg, Irr, Fort
 	 * @param adjustmentMnemonic E.g ch, gen.
 	 * @return The adjustment mnemonic text, e.g. Chariots. */
 	String getAdjustmentText(String drillName, String adjustmentMnemonic) {
+		if (adjustmentMnemonic == null || adjustmentMnemonic.isEmpty()) {
+			return("");
+		}
 		Drill drill = mCosts.getDrill(drillName);
 		String text = drill.getAdjustmentText(adjustmentMnemonic);
 		return(text);
@@ -359,6 +390,9 @@ class ArmyListCosts {
 	 * @param adjustmentMnemonic E.g ch, gen.
 	 * @return The adjustment cost. */
 	float getAdjustmentCost(String drillName, String adjustmentMnemonic) {
+		if (adjustmentMnemonic == null || adjustmentMnemonic.isEmpty()) {
+			return(0f);
+		}
 		Drill drill = mCosts.getDrill(drillName);
 		float cost = drill.getAdjustmentCost(adjustmentMnemonic);
 		return(cost);
@@ -391,66 +425,30 @@ class ArmyListCosts {
 	 * @param count The number of those troops.
 	 * @return The total cost. */
 	float getLineCost(String drillName, String typeName, String gradeName, String adjustmentMnemonic, int nbr) {
-		Drill drill = mCosts.getDrill(drillName);
-		Type type = drill.getType(typeName);
-		Troop troop = type.getTroop(gradeName);
-		float costEach = troop.getArmyPoints();
-		float adjCost = getAdjustmentCost(drillName, adjustmentMnemonic);
-		float troopCost = costEach + adjCost;
-		float totalCost = troopCost + nbr;
-		return(totalCost);
+		try {
+			Drill drill = mCosts.getDrill(drillName);
+			Type type = drill.getType(typeName);
+			Troop troop = type.getTroop(gradeName);
+			float costEach = troop.getArmyPoints();
+			float adjCost = getAdjustmentCost(drillName, adjustmentMnemonic);
+			float troopCost = costEach + adjCost;
+			float totalCost = troopCost * nbr;
+			return(totalCost);
+		}
+		catch (IllegalArgumentException iae) {
+			// some value is not set
+			log.info("Value not set: {}", iae.getMessage());
+			return(0);
+		}
 	}
 
 	//--------------------------------------------------------------------------
-	public static void main(String[] args) {
-		// some basic tests
-		String file_name = "resources/costs/costs_dbm_3_2.xml";
-		ArmyListCosts alc = null;
-		try {
-			alc = new ArmyListCosts(file_name);
-		}	// try
-		catch (Exception e) {
-			System.out.println("Something terrible happened: "+e.toString());
-		}	// catch
-		List<String> books = alc.getBooks();
-		System.out.println("Books: "+books.toString());
-		List<String> drills = alc.getDrillList();
-		StringBuilder sb = new StringBuilder();
-		for (String drill : drills) {	sb.append(drill);	sb.append(", ");	}
-		System.out.println("Drills: "+sb.toString());
+	String getRules() {
+		return(mCosts.mRules);
+	}
 
-		String[] types = alc.getTypes("Reg");
-		sb.setLength(0);
-		for (String type : types) {	sb.append(type);	sb.append(", ");	}
-		System.out.println("Types for Reg: "+sb.toString());
-
-		types = alc.getTypes("Irr");
-		sb.setLength(0);
-		for (String type : types) {	sb.append(type);	sb.append(", ");	}
-		System.out.println("Types for Irr: "+sb.toString());
-
-		types = alc.getTypes("Fort");
-		sb.setLength(0);
-		for (String type : types) {	sb.append(type);	sb.append(", ");	}
-		System.out.println("Types for Fort: "+sb.toString());
-
-		String[] grades = alc.getTroopGradeList("Reg","Ax");
-		sb.setLength(0);
-		for (String grade : grades) {	sb.append(grade);	sb.append(", ");	}
-		System.out.println("Grades for Reg Ax: "+sb.toString());
-
-		String[] adjs = alc.getTroopAdjustmentList("Irr","Ax","I");
-		sb.setLength(0);
-		for (String adj : adjs) {	sb.append(adj);	sb.append(", ");	}
-		System.out.println("Adjustments for Irr Ax I: "+sb.toString());
-
-		float el_adj = alc.getAdjustmentCost("Reg", "gen");
-		System.out.println("Element adjustments for Reg Kn F general is: "+el_adj);
-
-		float el_cost = alc.getTroopCost("Reg", "Kn", "F");
-		System.out.println("Element cost for Reg Kn F is: "+el_cost);
-
-		float el_equiv = alc.getTroopEquivalents("Reg", "Ps", "O");
-		System.out.println("Element equivalents for Reg Ps O is: "+el_equiv);
+	//--------------------------------------------------------------------------
+	String getVersion() {
+		return(mCosts.mVersion);
 	}
 }

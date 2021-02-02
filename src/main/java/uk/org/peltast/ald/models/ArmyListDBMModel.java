@@ -1,9 +1,12 @@
 package uk.org.peltast.ald.models;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.text.DecimalFormat;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -19,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 /** A DBM army list.
  *
@@ -31,7 +35,7 @@ public class ArmyListDBMModel {
 	private static final Logger log = LoggerFactory.getLogger(ArmyListDBMModel.class);
 	private static final int CMDS = 4;
 	public enum ColumnNames {QUANTITY, DESCRIPTION, DRILL, TYPE, GRADE, ADJUSTMENT, COST, TOTAL, CMD1_QTY, CMD2_QTY, CMD3_QTY, CMD4_QTY, UNUSED}
-	private enum AttributeNames{army, book, costFileName, id, name, year, rows, row, quantity, description, drill, type, grade, adjustment, cmdQty0, cmdQty1, cmdQty2, cmdQty3}
+	private enum AttributeNames{army, book, rules, version, id, name, year, rows, row, quantity, description, drill, type, grade, adjustment, cmdQty0, cmdQty1, cmdQty2, cmdQty3}
 
 	private class Row {
 		private int mQty;
@@ -52,46 +56,91 @@ public class ArmyListDBMModel {
 		}
 	}
 	private final ArrayList<Row> mRows = new ArrayList<>();
-	private int mArmyId	;	// used to save the file and in the directory
+	private String mArmyId = null;	// used to save the file and in the directory
 	private String mArmyName;
 	private String mArmyBook;
 	private String mArmyYear;
-	private String mArmyCostsFileName;
 	private ArmyListCosts mCosts;
-	
+	private boolean mRecalcNeeded = false;
+
 	// Calculated values not to be saved.
-	private int mArmyElements;
-	private float mArmyElementEquivalents;
-	private float mArmyBreakPoint;
-	private float mArmyCost;
-	private int[] mCmdElements = new int[CMDS];
-	private float[] mCmdElementEquivalents = new float[CMDS];
-	private float[] mCmdBreakPoint = new float[CMDS];
-	private float[] mCmdCost = new float[CMDS];
+	private class Totals {
+		private int mElements;
+		private float mEquivalents;
+		private float mBreakPoint;
+		private float mCost;
+	}
+	private Totals mArmyTotals = new Totals();
+	private Totals[] mCommandTotals = new Totals[CMDS];
 
 	//--------------------------------------------------------------------------
 	public ArmyListDBMModel() {
+		for (int cc=0; cc<CMDS; cc++) {
+			mCommandTotals[cc] = new Totals();
+		}
 	}
 
 	//--------------------------------------------------------------------------
-	public void setArmyCostsFile(ArmyListCosts costs) {
+	public void setArmyCosts(ArmyListCosts costs) {
 		mCosts = costs;
 	}
 
 	//--------------------------------------------------------------------------
-	public void setArmyCostFileName(String armyCostFileName) {
-		mArmyCostsFileName = armyCostFileName;
+	public int getArmyElements() {
+		return(mArmyTotals.mElements);
 	}
 
 	//--------------------------------------------------------------------------
-	public String getArmyCostFileName() {
-		return(mArmyCostsFileName);
+	public float getArmyEquivalents() {
+		return(mArmyTotals.mEquivalents);
+	}
+
+	//--------------------------------------------------------------------------
+	public float getArmyBreakPoint() {
+		return(mArmyTotals.mBreakPoint);
+	}
+
+	//--------------------------------------------------------------------------
+	public float getArmyCost() {
+		return(mArmyTotals.mCost);
+	}
+
+	//--------------------------------------------------------------------------
+	/** Gets the command's total elements
+	 * @param cmd 1-4
+	 * @return Total elements */
+	public int getCommandElements(int cmd) {
+		return(mCommandTotals[cmd-1].mElements);
+	}
+
+	//--------------------------------------------------------------------------
+	/** Gets the command's break point
+	 * @param cmd 1-4
+	 * @return The break point */
+	public float getCommandBreakPoint(int cmd) {
+		return(mCommandTotals[cmd-1].mBreakPoint);
+	}
+
+	//--------------------------------------------------------------------------
+	/** Gets the command's total cost
+	 * @param cmd 1-4
+	 * @return The total cost */
+	public float getCommandCost(int cmd) {
+		return(mCommandTotals[cmd-1].mCost);
+	}
+
+	//--------------------------------------------------------------------------
+	/** Gets the command's total equivalents
+	 * @param cmd 1-4
+	 * @return The total equivalents */
+	public float getCommandEquivelents(int cmd) {
+		return(mCommandTotals[cmd-1].mEquivalents);
 	}
 
 	//--------------------------------------------------------------------------
 	public void deleteRow(int index) {
 		mRows.remove(index);
-		recalcTotals();
+		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -101,6 +150,7 @@ public class ArmyListDBMModel {
 		Row row = new Row();
 		mRows.add(row);
 		int sz = mRows.size();
+		log.info("Added row {}", sz-1);
 		return(sz-1);
 	}
 
@@ -116,6 +166,7 @@ public class ArmyListDBMModel {
 			idx++;
 		}
 		mRows.add(idx, row);
+		log.info("Added row {}", idx);
 		return(idx);
 	}
 
@@ -132,13 +183,13 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	public int getId() {
+	public String getArmyId() {
+		if (mArmyId == null) {
+			Date now = new Date();
+			long millis = now.getTime();
+			mArmyId = Long.toString(millis, 36);
+		}
 		return(mArmyId);
-	}
-
-	//--------------------------------------------------------------------------
-	public void setId(int id) {
-		mArmyId = id;
 	}
 
 	//--------------------------------------------------------------------------
@@ -172,18 +223,13 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	public float getArmyTotalCost() {
-		return(mArmyCost);
-	}
-
-	//--------------------------------------------------------------------------
 	/** Sets a quantity for the row.
 	 * @param rowIndex 0 based row index.
 	 * @param quantity The number of elements. */
 	public void setRowQuantity(int rowIndex, int quantity) {
 		Row row = mRows.get(rowIndex);
 		row.mQty = quantity;
-		recalcTotals();
+		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -200,10 +246,10 @@ public class ArmyListDBMModel {
 	 * @param rowIndex The nought based row number.
 	 * @param command The 1 based command number (1-4).
 	 * @param quantity The number of elements. */
-	public void setCommandQuantity(int rowIndex, int command, int quantity) {
+	public void setRowCommandQuantity(int rowIndex, int command, int quantity) {
 		Row row = mRows.get(rowIndex);
 		row.mCmdQty[command-1] = quantity;
-		recalcTotals();
+		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -211,25 +257,16 @@ public class ArmyListDBMModel {
 	 * @param rowIndex The nought based row number.
 	 * @param command The 1 based command number (1-4).
 	 * @return The number of elements. */
-	public int getCommandQuantity(int rowIndex, int command) {
+	public int getRowCommandQuantity(int rowIndex, int command) {
 		Row row = mRows.get(rowIndex);
 		return(row.mCmdQty[command-1]);
 	}
 
 	//--------------------------------------------------------------------------
-	/** Gets a quantity.
-	 * @param row the row.
-	 * @param 1-4 = for specific command.
-	 * @return The number of elements. */
-	public int getCommandQuantity(Row row, int command) {
-		return(row.mCmdQty[command-1]);
-	}
-
-	//--------------------------------------------------------------------------
 	/** Sets a troop description
-	 * @param row 0 based row index, perhaps returned from addRow.
+	 * @param rowIndex 0 based row index, perhaps returned from addRow.
 	 * @param description The description, e.g. Companions. */
-	public void setDescription(int rowIndex, String description) {
+	public void setRowDescription(int rowIndex, String description) {
 		Row row = mRows.get(rowIndex);
 		row.mDesc = description;
 	}
@@ -238,7 +275,7 @@ public class ArmyListDBMModel {
 	/** Gets a troop's description
 	 * @param rowIndex The nought based row number.
 	 * @return The description, e.g. Companions. */
-	public String getDescription(int rowIndex) {
+	public String getRowDescription(int rowIndex) {
 		Row row = mRows.get(rowIndex);
 		return(row.mDesc);
 	}
@@ -247,17 +284,17 @@ public class ArmyListDBMModel {
 	/** Sets the troop's drill.
 	 * @param rowIndex The nought based row number.
 	 * @param drill The drill e.g. Irr, Reg, Fort. */
-	public void setDrill(int rowIndex, String drill) {
+	public void setRowDrill(int rowIndex, String drill) {
 		Row row = mRows.get(rowIndex);
 		row.mDrillName = drill;
-		recalcTotals();
+		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
 	/** Gets the troop's drill.
 	 * @param rowIndex The nought based row number.
 	 * @return The drill e.g. Irr, Reg, Fort. */
-	public String getDrill(int rowIndex) {
+	public String getRowDrill(int rowIndex) {
 		Row row = mRows.get(rowIndex);
 		return(row.mDrillName);
 	}
@@ -266,17 +303,17 @@ public class ArmyListDBMModel {
 	/** Sets the troop's type.
 	 * @param rowIndex The nought based row number.
 	 * @param type The type e.g. Kn, Cv, Pk, Bl */
-	public void setType(int rowIndex, String type) {
+	public void setRowType(int rowIndex, String type) {
 		Row row = mRows.get(rowIndex);
 		row.mTypeName = type;
-		recalcTotals();
+		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
 	/** Gets the troops's type.
 	 * @param rowIndex The nought based row number.
 	 * @return The type e.g. Kn, Cv, Pk, Bl */
-	public String getType(int rowIndex) {
+	public String getRowType(int rowIndex) {
 		Row row = mRows.get(rowIndex);
 		return(row.mTypeName);
 	}
@@ -285,17 +322,17 @@ public class ArmyListDBMModel {
 	/** Sets the troops's grade.
 	 * @param rowIndex The nought based row number.
 	 * @param grade The grade e.g. S, O, I, F, X. */
-	public void setGrade(int rowIndex, String grade) {
+	public void setRowGrade(int rowIndex, String grade) {
 		Row row = mRows.get(rowIndex);
 		row.mGradeName = grade;
-		recalcTotals();
+		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
 	/** Gets the troops's grade.
 	 * @param rowIndex The nought based row number.
 	 * @return The grade e.g. S, O, I, F, X. */
-	public String getGrade(int rowIndex) {
+	public String getRowGrade(int rowIndex) {
 		Row row = mRows.get(rowIndex);
 		return(row.mGradeName);
 	}
@@ -304,34 +341,38 @@ public class ArmyListDBMModel {
 	/** Sets the troop's adjustment.
 	 * @param rowIndex The nought based row number.
 	 * @param adjustment The adjustment e.g. "Ally general, Chariot". */
-	public void setAdjustment(int rowIndex, String adjustment) {
+	public void setRowAdjustment(int rowIndex, String adjustment) {
 		Row row = mRows.get(rowIndex);
 		row.mAdjustment = adjustment;
+		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
 	/** Gets the troop's adjustment.
 	 * @param rowIndex The nought based row number.
-	 * @return The adjustment e.g. "Ally general, Chariot". */
-	public String getAdjustment(int rowIndex) {
+	 * @return The adjustment e.g. "ally, ch". */
+	public String getRowAdjustment(int rowIndex) {
 		Row row = mRows.get(rowIndex);
 		return(row.mAdjustment);
 	}
 
 	//--------------------------------------------------------------------------
-	/** Sets unused element quantity which is the quantity on the row minus those allocated to each command.
+	/** Gets the troop's adjustment description.
 	 * @param rowIndex The nought based row number.
-	 * @param unused The number of unused elements. */
-	public void setUnusedQuantity(int rowIndex, int unused) {
+	 * @return The adjustment e.g. "Ally general, Chariot". */
+	public String getRowAdjustmentDescription(int rowIndex) {
 		Row row = mRows.get(rowIndex);
-		row.mUnusedElements = unused;
+		String drillName = row.mDrillName;
+		String adjustmentMnemonic = row.mAdjustment;
+		String adj = mCosts.getAdjustmentText(drillName, adjustmentMnemonic);
+		return(adj);
 	}
 
 	//--------------------------------------------------------------------------
 	/** Gets unused element quantity which is the quantity on the row minus those allocated to each command.
 	 * @param rowIndex The nought based row number.
 	 * @return The number of unused elements. */
-	public int  getUnusedQuantity(int rowIndex) {
+	public int  getRowUnusedQuantity(int rowIndex) {
 		Row row = mRows.get(rowIndex);
 		return(row.mUnusedElements);
 	}
@@ -340,43 +381,62 @@ public class ArmyListDBMModel {
 	/** Returns a string of XML representing the army in stored format.
 	 * @param pathName The path name to be used to save the file.
 	 * @return XML.
-	 * @throws FileNotFoundException
 	 * @throws XMLStreamException
+	 * @throws IOException 
 	 * @throws ParserConfigurationException
 	 * @throws TransformerException */
-	public void saveXML(String pathName) throws FileNotFoundException, XMLStreamException {
+	public String getAsXML() throws XMLStreamException, IOException {
+		recalcTotals();
 		XMLOutputFactory factory = XMLOutputFactory.newFactory();
-		FileOutputStream fos = new FileOutputStream(pathName);
-		XMLStreamWriter writer = factory.createXMLStreamWriter(fos);
-		writer.writeStartDocument();
-		writer.writeStartElement(AttributeNames.army.toString());
-		writer.writeAttribute(AttributeNames.book.toString(), mArmyBook);
-		writer.writeAttribute(AttributeNames.costFileName.toString(), mArmyCostsFileName);
-		writer.writeAttribute(AttributeNames.id.toString(), Integer.toString(mArmyId));
-		writer.writeAttribute(AttributeNames.name.toString(), mArmyName);
-		writer.writeAttribute(AttributeNames.year.toString(), mArmyYear);
-		
-		writer.writeStartElement(AttributeNames.rows.toString());
-		for (Row row : mRows) {
-		    writer.writeStartElement(AttributeNames.row.toString());
-		    writer.writeAttribute(AttributeNames.quantity.toString(), Integer.toString(row.mQty));
-		    writer.writeAttribute(AttributeNames.description.toString(), row.mDesc);
-		    writer.writeAttribute(AttributeNames.drill.toString(), row.mDrillName);
-		    writer.writeAttribute(AttributeNames.type.toString(), row.mTypeName);
-		    writer.writeAttribute(AttributeNames.grade.toString(), row.mGradeName);
-		    writer.writeAttribute(AttributeNames.adjustment.toString(), row.mAdjustment);
-		    writer.writeAttribute(AttributeNames.cmdQty0.toString(), Integer.toString(row.mCmdQty[0]));
-		    writer.writeAttribute(AttributeNames.cmdQty1.toString(), Integer.toString(row.mCmdQty[1]));
-		    writer.writeAttribute(AttributeNames.cmdQty2.toString(), Integer.toString(row.mCmdQty[2]));
-		    writer.writeAttribute(AttributeNames.cmdQty3.toString(), Integer.toString(row.mCmdQty[3]));
-		    writer.writeEndElement();	// row
+		try (StringWriter sw = new StringWriter()) {
+			XMLStreamWriter writer = factory.createXMLStreamWriter(sw);
+			writer.writeStartDocument();
+			writer.writeStartElement(AttributeNames.army.toString());
+			writeXMLAttribute(writer, AttributeNames.book, mArmyBook);
+			writeXMLAttribute(writer, AttributeNames.rules, mCosts.getRules());
+			writeXMLAttribute(writer, AttributeNames.version, mCosts.getVersion());
+			writeXMLAttribute(writer, AttributeNames.id, getArmyId());
+			writeXMLAttribute(writer, AttributeNames.name, mArmyName);
+			writeXMLAttribute(writer, AttributeNames.year, mArmyYear);
+
+			writer.writeStartElement(AttributeNames.rows.toString());
+			for (Row row : mRows) {
+			    writer.writeStartElement(AttributeNames.row.toString());
+			    writeXMLAttribute(writer, AttributeNames.quantity, row.mQty);
+			    writeXMLAttribute(writer, AttributeNames.description, row.mDesc);
+			    writeXMLAttribute(writer, AttributeNames.drill, row.mDrillName);
+			    writeXMLAttribute(writer, AttributeNames.type, row.mTypeName);
+			    writeXMLAttribute(writer, AttributeNames.grade, row.mGradeName);
+			    writeXMLAttribute(writer, AttributeNames.adjustment, row.mAdjustment);
+			    writeXMLAttribute(writer, AttributeNames.cmdQty0, row.mCmdQty[0]);
+			    writeXMLAttribute(writer, AttributeNames.cmdQty1, row.mCmdQty[1]);
+			    writeXMLAttribute(writer, AttributeNames.cmdQty2, row.mCmdQty[2]);
+			    writeXMLAttribute(writer, AttributeNames.cmdQty3, row.mCmdQty[3]);
+			    writer.writeEndElement();	// row
+			}
+			writer.writeEndElement();	// rows
+
+			writer.writeEndElement();	// army
+			writer.writeEndDocument();
+			writer.close();
+			String xml = sw.toString();
+			return(xml);
 		}
-		writer.writeEndElement();	// rows
-		
-		writer.writeEndElement();	// army
-		writer.writeEndDocument();
-		writer.close();
     }
+
+	//--------------------------------------------------------------------------
+	private static void writeXMLAttribute(XMLStreamWriter writer, AttributeNames name, String value) throws XMLStreamException {
+		if (value != null && !value.isEmpty()) {
+		    writer.writeAttribute(name.toString(), value);
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	private static void writeXMLAttribute(XMLStreamWriter writer, AttributeNames name, int value) throws XMLStreamException {
+		if (value != 0) {
+		    writer.writeAttribute(name.toString(), Integer.toString(value));
+		}
+	}
 
 	//--------------------------------------------------------------------------
 	/** Loads an army list from the data provided.
@@ -384,16 +444,19 @@ public class ArmyListDBMModel {
 	 * @return A YAML string of the army list. */
 	void loadFromXML(String xml) {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, ""); // Compliant
+		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, ""); // compliant
 		try {
 			dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
 			DocumentBuilder db = dbf.newDocumentBuilder();
-			Document doc = db.parse(xml);
+			StringReader sr = new StringReader(xml);
+			InputSource is = new InputSource(sr);
+			Document doc = db.parse(is);
 			NodeList armyNodes = doc.getElementsByTagName(AttributeNames.army.toString()); // should only be one
 			int count = armyNodes.getLength();
 			log.info("There are {} army nodes. There should be 1.", count);
 			Element armyNode = (Element) armyNodes.item(0);
-			String ids = armyNode.getAttribute("id");
-			mArmyId = Integer.parseInt(ids);
+			mArmyId = armyNode.getAttribute("id");
 			mArmyName = armyNode.getAttribute(AttributeNames.name.toString());
 			mArmyBook = armyNode.getAttribute(AttributeNames.book.toString());
 			mArmyYear = armyNode.getAttribute(AttributeNames.year.toString());
@@ -403,7 +466,7 @@ public class ArmyListDBMModel {
 			count = rowNodes.getLength();
 			log.info("There are {} rows.", count);
 			for (int rr = 0; rr < count; rr++) {
-				Element rowNode = (Element) armyNodes.item(rr);
+				Element rowNode = (Element) rowNodes.item(rr);
 				Row row = new Row();
 				row.mQty = getAttributeAsInt(rowNode, AttributeNames.quantity.toString());
 				row.mDesc = rowNode.getAttribute(AttributeNames.description.toString());
@@ -416,17 +479,18 @@ public class ArmyListDBMModel {
 				row.mCmdQty[2] = getAttributeAsInt(rowNode, AttributeNames.cmdQty2.toString());
 				row.mCmdQty[3] = getAttributeAsInt(rowNode, AttributeNames.cmdQty3.toString());
 				mRows.add(row);
-				log.info("Added row {}.", row.toString());
+				log.info("Added row {}.", row);
 			}
 		}
 		catch (Exception e) {
 			log.warn("Error loading army from XML.", e);
 		}
+		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
-	private int getAttributeAsInt(Element el, String attr_name) {
-		String value = el.getAttribute(attr_name);
+	private static int getAttributeAsInt(Element el, String attrName) {
+		String value = el.getAttribute(attrName);
 		if (value == null || value.isEmpty()) {
 			return (0);
 		}
@@ -436,8 +500,10 @@ public class ArmyListDBMModel {
 
 	//--------------------------------------------------------------------------
 	/** Returns a plain text version of the army list for basic printing or
-	 * emailing or whatever else may be required. */
+	 * emailing or whatever else may be required. 
+	 * @return The army list laid out as plain text. */
 	public String getAsPlainText() {
+		recalcTotals();
 		StringBuilder sb = new StringBuilder();
 		String str = MessageFormat.format("{0} - {1} ({2})",mArmyName,mArmyYear,mArmyBook);
 		sb.append(str);
@@ -447,13 +513,10 @@ public class ArmyListDBMModel {
 			sb.append('-');
 		}	// for
 		sb.append("\r\n\r\n");
-		for (Row row : mRows) {
-			double el_cost = mCosts.getTroopCost(row.mDrillName,row.mTypeName,row.mGradeName);
-			double line_cost = mCosts.getLineCost(row.mDrillName,row.mTypeName,row.mGradeName,row.mAdjustment, row.mQty);
-	        String cmd1 = nbrOrSpaces(getCommandQuantity(row,1),3);
-	        String cmd2 = nbrOrSpaces(getCommandQuantity(row,2),3);
-	        String cmd3 = nbrOrSpaces(getCommandQuantity(row,3),3);
-	        String cmd4 = nbrOrSpaces(getCommandQuantity(row,4),3);
+		for (int rowIndex=0; rowIndex < mRows.size(); rowIndex++) {
+			Row row = mRows.get(rowIndex);
+			double elCost = mCosts.getLineCost(row.mDrillName,row.mTypeName,row.mGradeName,row.mAdjustment, 1);
+			double lineCost = mCosts.getLineCost(row.mDrillName,row.mTypeName,row.mGradeName,row.mAdjustment, row.mQty);
 	        StringBuilder sb2 = new StringBuilder();
 	        sb2.append(row.mDrillName);
 	        sb2.append(' ');
@@ -461,125 +524,100 @@ public class ArmyListDBMModel {
 	        sb2.append('(');
 	        sb2.append(row.mGradeName);
 	        sb2.append(')');
-	        sb2.append(", ");
-			sb2.append(row.mAdjustment);
-			str = String.format("%3s    %-20s %-30s %5.1f %5.1f %3s   %3s   %3s   %3s\r\n",row.mQty,row.mDesc,sb2.toString(),el_cost,line_cost,cmd1,cmd2,cmd3,cmd4);
+	        String adj = getRowAdjustmentDescription(rowIndex);
+	        if (!adj.isEmpty()) {
+		        sb2.append(", ");
+				sb2.append(adj);
+	        }
+			str = String.format("%3s    %-13s %-23s %5s %5s %3s   %3s   %3s   %3s%n",
+					row.mQty, row.mDesc, sb2.toString(), fmt(elCost, 5, 1), fmt(lineCost, 5, 1), 
+					fmt(getRowCommandQuantity(rowIndex,1), 3, 0), fmt(getRowCommandQuantity(rowIndex,2), 3, 0),
+					fmt(getRowCommandQuantity(rowIndex,3), 3, 0), fmt(getRowCommandQuantity(rowIndex,4), 3, 0));
 			sb.append(str);
 		}	// for - each row
 
-		int qty_total = getQuantityTotal();
-		float cost_total = getCostTotal();
-		int cmd1_el_total = getQuantityCommandTotal(1);
-		int cmd2_el_total = getQuantityCommandTotal(2);
-		int cmd3_el_total = getQuantityCommandTotal(3);
-		int cmd4_el_total = getQuantityCommandTotal(4);
-		sb.append("-----                                                            ----- ----- ----- ----- -----\r\n");
-		str = String.format("%3d                                                              %5.1f %3d   %3d   %3d   %3d\r\n",qty_total,cost_total,cmd1_el_total,cmd2_el_total,cmd3_el_total,cmd4_el_total);
+		sb.append("-----                                              ----- ----- ----- ----- -----\r\n");
+		str = String.format("                                           Points: %5s %5s %5s %5s %5s%n",
+				fmt(mArmyTotals.mCost, 5, 1),
+				fmt(mCommandTotals[0].mCost, 5, 1), fmt(mCommandTotals[1].mCost, 5, 1),
+				fmt(mCommandTotals[2].mCost, 5, 1), fmt(mCommandTotals[3].mCost, 5, 1));
 		sb.append(str);
 
-		float army_equiv = getEquivalentTotal();
-		float cmd1_ee = getEquivalentCommandTotal(1);
-		float cmd2_ee = getEquivalentCommandTotal(2);
-		float cmd3_ee = getEquivalentCommandTotal(3);
-		float cmd4_ee = getEquivalentCommandTotal(4);
-		str = String.format("%5.1f (equivalents)                                       Equivalents:  %4.1f  %4.1f  %4.1f  %4.1f\r\n",army_equiv,cmd1_ee,cmd2_ee,cmd3_ee,cmd4_ee);
+		str = String.format("%3s   (elements)                           Elements:     %3s   %3s   %3s   %3s%n",
+				mArmyTotals.mElements,
+				fmt(mCommandTotals[0].mElements, 3, 0), fmt(mCommandTotals[1].mElements, 3, 0),
+				fmt(mCommandTotals[2].mElements, 3, 0), fmt(mCommandTotals[3].mElements, 3, 0));
 		sb.append(str);
 
-		float half_the_army = roundUpToNearestHalf(army_equiv / 2f);
-		float cmd1_bp = roundUpToNearestHalf(cmd1_ee / 3f);
-		float cmd2_bp = roundUpToNearestHalf(cmd2_ee / 3f);
-		float cmd3_bp = roundUpToNearestHalf(cmd3_ee / 3f);
-		float cmd4_bp = roundUpToNearestHalf(cmd4_ee / 3f);
-		str = String.format("%5.1f (half the army)                                     Break points: %4.1f  %4.1f  %4.1f  %4.1f\r\n",half_the_army,cmd1_bp,cmd2_bp,cmd3_bp,cmd4_bp);
+		str = String.format("%5s (equivalents)                        Equivalents:   %4s  %4s  %4s  %4s%n",
+				fmt(mArmyTotals.mEquivalents, 5, 1),
+				fmt(mCommandTotals[0].mEquivalents, 4, 1), fmt(mCommandTotals[1].mEquivalents, 4, 1),
+				fmt(mCommandTotals[2].mEquivalents, 4, 1), fmt(mCommandTotals[3].mEquivalents, 4, 1));
+		sb.append(str);
+
+		str = String.format("%5s (half the army)                      Break points:  %4s  %4s  %4s  %4s%n",
+				fmt(mArmyTotals.mBreakPoint, 5, 1),
+				fmt(mCommandTotals[0].mBreakPoint, 4, 1), fmt(mCommandTotals[1].mBreakPoint, 4, 1),
+				fmt(mCommandTotals[2].mBreakPoint, 4, 1), fmt(mCommandTotals[3].mBreakPoint, 4, 1));
 		sb.append(str);
 		str = sb.toString();
 		return(str);
 	}
 
 	//--------------------------------------------------------------------------
-	/** For printing.
+	/** For printing a fixed width number. If there are decimal places and the 
+	 * number is integral then no decimal point or following digits are printed 
+	 * but spaces instead. If the number is nil then blank is printed.
 	 * @param val A number.
 	 * @param width The width of the result in characters.
 	 * @return If the number is 0 then the width number of spaces, otherwise the number right justified. */
-	private String nbrOrSpaces(Number nbr, int width) {
+	private static String fmt(Number nbr, int width, int dps) {
 		StringBuilder sb = new StringBuilder();
-		int ww = 0;
-		if (nbr.doubleValue() != 0) {
-			sb.append(nbr);
+		for (int ii=0; ii<width; ii++) {
+			sb.append('#');
 		}
-		for (int ii=ww; ii<width; ii++) {
-			sb.insert(0, ' ');	// left pad
-		}	// if
+		if (dps > 0) {
+			sb.setCharAt(width-dps-1, '.');
+		}
+		DecimalFormat df = new DecimalFormat(sb.toString());
+		String txt = df.format(nbr);
+		if (txt.equals("0")) {
+			txt = "";
+		}
+		sb.setLength(0);
+		sb.append(txt);
+
+		if ((dps > 0) && (txt.indexOf('.') == -1)) {
+			sb.append(' ');	// for the decimal point
+			for (int ii=0; ii<dps; ii++) {
+				sb.append(' ');	// for each decimal place
+			}
+		}
+
+		int len = sb.length();
+		for (int ii=0; ii<width-len; ii++) {
+			sb.insert(0, ' ');
+		}
 		return(sb.toString());
 	}
 
 	//--------------------------------------------------------------------------
-	private float roundUpToNearestHalf(float val) {
+	private static float roundUpToNearestHalf(float val) {
 		float ret = (float)(Math.ceil(val * 2) / 2);
 		return(ret);
 	}
 
 	//--------------------------------------------------------------------------
-	private int getQuantityTotal() {
-		int qtyTotal = 0;
-		for (Row row : mRows) {
-			qtyTotal += row.mQty;
-		}
-		return(qtyTotal);
-	}
-
-	//--------------------------------------------------------------------------
-	private int getQuantityCommandTotal(int cmd) {
-		int qtyCmdTotal = 0;
-		for (Row row : mRows) {
-			float row_qty = getCommandQuantity(row,cmd);
-			qtyCmdTotal += row_qty;
-		}
-		return(qtyCmdTotal);
-	}
-
-	//--------------------------------------------------------------------------
-	private float getEquivalentTotal() {
-		float equivTotal = 0;
-		for (Row row : mRows) {
-			float elEquiv = mCosts.getTroopEquivalents(row.mDrillName,row.mTypeName,row.mGradeName);
-			equivTotal += row.mQty * elEquiv;
-		}
-		return(equivTotal);
-	}
-
-	//--------------------------------------------------------------------------
-	private float getEquivalentCommandTotal(int cmd) {
-		float equivTotal = 0;
-		for (Row row : mRows) {
-			float rowQty = row.mCmdQty[cmd];
-			float eq = mCosts.getTroopEquivalents(row.mDrillName,row.mTypeName,row.mGradeName);
-			equivTotal += (eq * rowQty);
-		}
-		return(equivTotal);
-	}
-
-	//--------------------------------------------------------------------------
-	private float getCostTotal() {
-		float costTotal = 0;
-		for (Row row : mRows) {
-			float lineCost = mCosts.getLineCost(row.mDrillName,row.mTypeName,row.mGradeName, row.mAdjustment, row.mQty);
-			costTotal += lineCost;
-		}	// for - each row
-		return(costTotal);
-	}
-
-	//--------------------------------------------------------------------------
 	private void resetAllTotals() {
-		mArmyElements  =0;
-		mArmyElementEquivalents = 0f;
-		mArmyBreakPoint = 0f;
-		mArmyCost = 0f;
+		mArmyTotals.mElements  =0;
+		mArmyTotals.mEquivalents = 0f;
+		mArmyTotals.mBreakPoint = 0f;
+		mArmyTotals.mCost = 0f;
 		for (int cc=0; cc< CMDS; cc++) {
-			mCmdElements[cc] = 0;
-			mCmdElementEquivalents[cc] = 0f;
-			mCmdBreakPoint[cc] = 0f;
-			mCmdCost[cc] = 0f;;
+			mCommandTotals[cc].mElements = 0;
+			mCommandTotals[cc].mEquivalents = 0f;
+			mCommandTotals[cc].mBreakPoint = 0f;
+			mCommandTotals[cc].mCost = 0f;
 		}
 	}
 
@@ -597,44 +635,42 @@ public class ArmyListDBMModel {
 	 * </ol>
 	 * */
 	private void recalcTotals() {
+		if (!mRecalcNeeded) {
+			return;
+		}
 		resetAllTotals();
 		int rowCount = mRows.size();
 		for (int rr=0; rr<rowCount; rr++) {
 			Row row = mRows.get(rr);
-			mArmyElements += row.mQty;
-			float cost = mCosts.getTroopCost(row.mDrillName,row.mTypeName,row.mGradeName);
-			float adj = mCosts.getElementAdjustment(row.mDrillName,row.mTypeName,row.mGradeName,row.mAdjustment);
-			cost += adj;
-			cost *= row.mQty;
-			mArmyCost += cost;
-			float eq = mCosts.getElementEquivalents(row.mDrillName,row.mTypeName,row.mGradeName);
-			eq *= row.mQty;
-			mTotals[0].mElementEquivalents += eq;
-			row.mUnused = row.mQty = row.mCmdQty[0] - row.mCmdQty[1] - row.mCmdQty[2] - row.mCmdQty[3];
-			for (int ii=0; ii<4; ii++) {
-				mTotals[ii+1].mElements += row.mCmdQty[ii];
-				mTotals[ii+1].mElementEquivalents += (row.mCmdQty[ii] * eq);
+			mArmyTotals.mElements += row.mQty;
+			float costEach = mCosts.getLineCost(row.mDrillName, row.mTypeName, row.mGradeName, row.mAdjustment, 1);
+			mArmyTotals.mCost += (costEach * row.mQty);
+			float eq = mCosts.getTroopEquivalents(row.mDrillName,row.mTypeName,row.mGradeName);
+			mArmyTotals.mEquivalents += (eq * row.mQty);
+			row.mUnusedElements = row.mQty - row.mCmdQty[0] - row.mCmdQty[1] - row.mCmdQty[2] - row.mCmdQty[3];
+			for (int cc=0; cc<4; cc++) {
+				int cmdQty = row.mCmdQty[cc];
+				if (cmdQty > 0) {
+					mCommandTotals[cc].mElements += cmdQty;
+					mCommandTotals[cc].mEquivalents += (cmdQty * eq);
+					mCommandTotals[cc].mCost += (cmdQty * costEach);
+				}
 			}	// for - reset all command totals
 		}	// for - each row
-		mTotals[0].mBreakPoint = roundUpToNearestHalf(mTotals[0].mElementEquivalents / 2f);
-		for (int ii=1; ii<=4; ii++) {
-			mTotals[ii].mElementEquivalents = roundUpToNearestHalf(mTotals[ii].mElementEquivalents / 3f);
-		}	// for - reset all command totals
+		mArmyTotals.mBreakPoint = roundUpToNearestHalf(mArmyTotals.mEquivalents / 2f);
+		for (int cc=0; cc<4; cc++) {
+			mCommandTotals[cc].mBreakPoint = roundUpToNearestHalf(mCommandTotals[cc].mEquivalents / 3f);
+		}
+		mRecalcNeeded = false;
 	}
 
 	//--------------------------------------------------------------------------
-	public static void main(String argv[]) {
-		// some tests
-		ArmyListDBMModel aldm = new ArmyListDBMModel();
-		aldm.setArmyName("Thracian");
-		aldm.setArmyBook("1");
-		aldm.setArmyYear("300BC");
-		int index = aldm.addRow();
-		aldm.setRowQuantity(index, 1);
-		aldm.setCommandQuantity(index, 1, 1);
-		aldm.setDescription(index, "General");
-		aldm.setDrill(index, "Irr");
-		aldm.setType(index, "Cv");
-		aldm.setGrade(index, "O");
+	public void clearArmyist() {
+		setArmyBook(null);
+		setArmyName(null);
+		setArmyYear(null);
+		mArmyId = null;
+		mRows.clear();
+		resetAllTotals();
 	}
 }

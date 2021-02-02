@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<costs rules="DBM" version="3.2">
+<costs rules="DBM" version="3.3">
 	<drill name="Reg">
 		<adjustments>
 			<adjustment name="ch" text="Chariots" cost="-1" />
@@ -8,6 +8,9 @@
 			<adjustment name="gen" text="General" cost="20" />
 			<adjustment name="chgen" text="Chariot general" cost="19" />
 			<adjustment name="mtdgen" text="Mounted general" cost="21" />
+			<adjustment name="gen1" text="General (sole)" cost="10" />
+			<adjustment name="chgen1" text="Chariot general (sole)" cost="9" />
+			<adjustment name="mtdgen1" text="Mounted general (sole)" cost="11" />
 			<adjustment name="ally" text="Ally general" cost="10" />
 			<adjustment name="chally" text="Chariot ally general" cost="9" />
 			<adjustment name="mtdally" text="Mounted ally general" cost="11" />
@@ -92,7 +95,7 @@
 		</types>
 	</drill>
 	<drill name="Irr">
-		<adjustments>
+ 		<adjustments>
 			<adjustment name="ch" text="Chariots" cost="-1" />
 			<adjustment name="mtd" text="Mounted" cost="1" />
 			<adjustment name="rr" text="Rear rank" cost="-1" />
