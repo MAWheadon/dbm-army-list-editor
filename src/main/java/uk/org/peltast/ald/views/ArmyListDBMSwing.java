@@ -18,7 +18,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -130,6 +129,7 @@ public class ArmyListDBMSwing {
 							return;
 						}
 						log.info("About to delete army {}", armyId);
+						
 						String path = App.getArmyListPath(armyId);
 						try {
 							Files.delete(Paths.get(path));
@@ -212,19 +212,20 @@ public class ArmyListDBMSwing {
 					int tabCount = mTabPane.getTabCount();
 					for (int ii=0; ii<tabCount; ii++) {
 						Component comp = mTabPane.getComponentAt(ii);
-						if (comp instanceof ArmyListDBMEditorSwing) {
-							ArmyListDBMEditorSwing ed = (ArmyListDBMEditorSwing)comp;
-							/*
-							ArmyListDBMModel mdl = ed.getModel();
-							try {
-								mdl.saveArmy(ii);
-							}
-							catch (Exception e) {
-								log.warn("Error", e);
-								errorMessage("Error: "+e);
-							}
-							*/
-						}	// if
+						String panelName = comp.getName();
+						if (panelName.equals("army")) {
+							
+						}
+						/*
+						ArmyListDBMModel mdl = ed.getModel();
+						try {
+							mdl.saveArmy(ii);
+						}
+						catch (Exception e) {
+							log.warn("Error", e);
+							errorMessage("Error: "+e);
+						}
+						*/
 					}	// for - each tab
 					try {
 						saveIndex();
@@ -247,81 +248,65 @@ public class ArmyListDBMSwing {
 			}
 			mFrame.setVisible(true);
 		}	// run
-	}
 
-	//--------------------------------------------------------------------------
-	private void styleButtons(JButton btn) {
-		btn.setBorderPainted(false);
-		btn.setContentAreaFilled(false);
-		LineBorder bdr = new LineBorder(Color.DARK_GRAY,1,true);
-		Border margin = new EmptyBorder(4,4,4,4);
-		btn.setBorder(new CompoundBorder(bdr, margin));
-	}
+		//--------------------------------------------------------------------------
+		private void saveIndex() throws IOException, XMLStreamException {
+			String dataDir = App.getDataDirectory();
+			File ff = new File(dataDir);
+			if (!ff.exists()) {
+				log.info("About to create {}", dataDir);
+				boolean ok = ff.mkdirs();
+				log.info("Create {} successful? {}", dataDir, ok);
+			}
+			String path = dataDir + File.separator + "index.xml";
+			String xml = mArmyListIndex.getAsXML();
+			try (FileWriter fr = new FileWriter(path); BufferedWriter br = new BufferedWriter(fr)) {
+				br.write(xml);
+			}
+			log.info("Saving index XML complete");
+		}
 
-	//--------------------------------------------------------------------------
-	private void errorMessage(String msg) {
-		JOptionPane.showMessageDialog(mFrame.getContentPane(),msg);
-	}
+		//--------------------------------------------------------------------------
+		private void styleButtons(JButton btn) {
+			btn.setBorderPainted(false);
+			btn.setContentAreaFilled(false);
+			LineBorder bdr = new LineBorder(Color.DARK_GRAY,1,true);
+			Border margin = new EmptyBorder(4,4,4,4);
+			btn.setBorder(new CompoundBorder(bdr, margin));
+		}
 
-	//--------------------------------------------------------------------------
-	private int getTab(String id) {
-		int tabCount = mTabPane.getTabCount();
-		for (int ii=0; ii<tabCount; ii++) {
-			Component comp = mTabPane.getComponentAt(ii);
-			if (comp instanceof ArmyListDBMEditorSwing) {
-				ArmyListDBMEditorSwing ed = (ArmyListDBMEditorSwing)comp;
-				/*
-				ArmyListDBMModel mdl = ed.getModel();
-				String id2 = mdl.getArmyId();
-				if (id.equals(id2)) {
+		//--------------------------------------------------------------------------
+		private void errorMessage(String msg) {
+			JOptionPane.showMessageDialog(mFrame.getContentPane(),msg);
+		}
+
+		//--------------------------------------------------------------------------
+		private int getTab(String id) {
+			int tabCount = mTabPane.getTabCount();
+			for (int ii=0; ii<tabCount; ii++) {
+				Component comp = mTabPane.getComponentAt(ii);
+				String panelName = comp.getName();
+				if (panelName.equals(id)) {
 					return(ii);
-				}	// if - found an existing tab
-				*/
-			}	// if
-		}	// for - each tab
-		return(-1);
-	}
+				}
+			}
+			return(-1);
+		}
 
-	//--------------------------------------------------------------------------
-	private void loadIndex() throws IOException, ParserConfigurationException, SAXException {
-		String dataDir = App.getDataDirectory();
-		String path = dataDir + File.separator + "index.xml";
-		File ff = new File(path);
-		boolean exists = ff.exists();
-		log.info("Index file {} exists? ", exists);
-		if (!exists) {
-			return;	// nothing to do
+		//--------------------------------------------------------------------------
+		private void loadIndex() {
+			mArmyListIndex.loadFromFile();
+			String[] ids = mArmyListIndex.getEntryIDs();
+			for (int ii=0; ii< ids.length; ii++) {
+				String id = ids[ii];
+				String book = mArmyListIndex.getBook(id);
+				String name = mArmyListIndex.getName(id);
+				String points = mArmyListIndex.getPoints(id);
+				String year = mArmyListIndex.getYear(id);
+				mIndexTableModel.addRow(new Object[] {name, book, year, points});
+				mIndexTableModel.addHiddenValue(id);
+			}
 		}
-		String xml = new String(Files.readAllBytes(Paths.get(path)));
-		log.info("Index XML is {}", xml);
-		mArmyListIndex.loadFromXML(xml);
-		String[] ids = mArmyListIndex.getEntryIDs();
-		for (int ii=0; ii< ids.length; ii++) {
-			String id = ids[ii];
-			String book = mArmyListIndex.getBook(id);
-			String name = mArmyListIndex.getName(id);
-			String points = mArmyListIndex.getPoints(id);
-			String year = mArmyListIndex.getYear(id);
-			mIndexTableModel.addRow(new Object[] {name, book, year, points});
-			mIndexTableModel.addHiddenValue(id);
-		}
-	}
-
-	//--------------------------------------------------------------------------
-	private void saveIndex() throws IOException, XMLStreamException {
-		String dataDir = App.getDataDirectory();
-		File ff = new File(dataDir);
-		if (!ff.exists()) {
-			log.info("About to create {}", dataDir);
-			boolean ok = ff.mkdirs();
-			log.info("Create {} successful? {}", dataDir, ok);
-		}
-		String path = dataDir + File.separator + "index.xml";
-		String xml = mArmyListIndex.getAsXML();
-		try (FileWriter fr = new FileWriter(path); BufferedWriter br = new BufferedWriter(fr)) {
-			br.write(xml);
-		}
-		log.info("Saving index XML complete");
 	}
 
 	//--------------------------------------------------------------------------
@@ -336,7 +321,8 @@ public class ArmyListDBMSwing {
 
 	//--------------------------------------------------------------------------
 	private class HiddenColumnTableModel extends DefaultTableModel {
-		List<Object> mHidden = new ArrayList<>();
+		private static final long serialVersionUID = 1L;
+		private final transient List<Object> mHidden = new ArrayList<>();
 
 	    public Object getHiddenValue(int rowIndex) {
 	    	int rowCount = mHidden.size();
@@ -345,19 +331,19 @@ public class ArmyListDBMSwing {
 	    	}	// if
 	    	Object obj = mHidden.get(rowIndex);
 	    	return(obj);
-	    }	// getHiddenValue
+	    }
 
 	    public void addHiddenValue(Object value) {
 	    	mHidden.add(value);
-	    }	// addHiddenValue
+	    }
 
 	    public void setHiddenValue(int rowIndex, Object value) {
 	    	mHidden.set(rowIndex,value);
-	    }	// setHiddenValue
+	    }
 
 	    @Override
 	    public boolean isCellEditable(int row, int column) {
 	       return false;	// all cells false
-	    }	// isCellEditable
+	    }
 	}
 }

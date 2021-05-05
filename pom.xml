@@ -35,5 +35,10 @@
     	<artifactId>slf4j-jdk14</artifactId>
     	<version>1.7.30</version>
     </dependency>
+    <dependency>
+    	<groupId>net.harawata</groupId>
+    	<artifactId>appdirs</artifactId>
+    	<version>1.2.1</version>
+    </dependency>
   </dependencies>
 </project>

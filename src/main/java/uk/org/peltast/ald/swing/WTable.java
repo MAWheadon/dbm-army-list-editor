@@ -2,7 +2,7 @@ package uk.org.peltast.ald.swing;
 
 import java.awt.Component;
 import java.util.ArrayList;
-import java.util.logging.Level;
+import java.util.List;
 
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
@@ -17,7 +17,8 @@ import javax.swing.JTextField;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
-import com.maw.util.WLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** A Table implemented with GroupLayout. It features a header section, a 
  * footer section and a body section. You have to specify the total number of
@@ -25,161 +26,162 @@ import com.maw.util.WLog;
  *  
  * @author Mark Andrew Wheadon.
  * @date 11th June 2012.
- * @Copyright, Mark Andrew Wheadon, 2012, 2013.
+ * @Copyright, Mark Andrew Wheadon, 2012, 2021.
  * @licence MIT License.
  */
 public class WTable {
-	private final int m_nbr_columns;
-	private final ArrayList<ArrayList<JComponent>> m_header_components = new ArrayList<ArrayList<JComponent>>();
-	private final ArrayList<ArrayList<JComponent>> m_body_components = new ArrayList<ArrayList<JComponent>>();
-	private final ArrayList<ArrayList<JComponent>> m_footer_components = new ArrayList<ArrayList<JComponent>>();
-	private final JPanel m_panel = new JPanel();
+	private static final Logger log = LoggerFactory.getLogger(WTable.class);
+	private final int mNumberOfColumns;
+	private final List<List<JComponent>> mHeaderComponents = new ArrayList<>();
+	private final List<List<JComponent>> mBodyComponents = new ArrayList<>();
+	private final List<List<JComponent>> mFooterComponents = new ArrayList<>();
+	private final JPanel mPanel = new JPanel();
 
 	//--------------------------------------------------------------------------
-	public WTable(int nbr_columns) {
-		m_nbr_columns = nbr_columns;
-	}	// table
+	public WTable(int nbrColumns) {
+		mNumberOfColumns = nbrColumns;
+	}
 
 	//--------------------------------------------------------------------------
-	public JPanel getPanel() {return(m_panel);}
+	public JPanel getPanel() {return(mPanel);}
 
 	//--------------------------------------------------------------------------
 	/** Used for adding any JComponents to the row */
 	public void addRow(WTableSection section, JComponent ... comps) {
-		if (comps.length != m_nbr_columns) {
+		if (comps.length != mNumberOfColumns) {
 			throw new IllegalArgumentException("Number of components does not match number of columns.");
 		}	// if
 
-		ArrayList<JComponent> row = new ArrayList<JComponent>();
+		List<JComponent> row = new ArrayList<>();
 		for (JComponent comp : comps) {
 			row.add(comp);
-		}	// for - each component
+		}
 		switch (section) {
 			case HEADER : {
-				m_header_components.add(row);
+				mHeaderComponents.add(row);
 				break;
-			}	// case
+			}
 			case BODY : {
-				m_body_components.add(row);
+				mBodyComponents.add(row);
 				break;
-			}	// case
+			}
 			case FOOTER : {
-				m_footer_components.add(row);
+				mFooterComponents.add(row);
 				break;
-			}	// case				
-		}	// switch
-		rebuild_layout();
-	}	// addRow
+			}				
+		}
+		rebuildLayout();
+	}
 
 	//--------------------------------------------------------------------------
 	/** Convenience method used for adding a row of labels */
 	public void addRow(WTableSection section, String ... labels) {
-		JLabel[] label_arr = new JLabel[labels.length];
+		JLabel[] labelArr = new JLabel[labels.length];
 		int ii = 0;
 		for (String label : labels) {
-			label_arr[ii] = new JLabel(label);
+			labelArr[ii] = new JLabel(label);
 			ii++;
 		}	// for - each component
-		addRow(section,label_arr);
-	}	// addRow
+		addRow(section,labelArr);
+	}
 
 	//--------------------------------------------------------------------------
-	private void rebuild_layout() {
-		m_panel.removeAll();
-		GroupLayout m_grp_lyt = new GroupLayout(m_panel);
-		m_panel.setLayout(m_grp_lyt);
-		m_grp_lyt.setAutoCreateGaps(true);
-		m_grp_lyt.setAutoCreateContainerGaps(true);
+	private void rebuildLayout() {
+		mPanel.removeAll();
+		GroupLayout groupLayout = new GroupLayout(mPanel);
+		mPanel.setLayout(groupLayout);
+		groupLayout.setAutoCreateGaps(true);
+		groupLayout.setAutoCreateContainerGaps(true);
 
-		int nbr_header_rows = m_header_components.size();
-		int nbr_body_rows = m_body_components.size();
-		int nbr_footer_rows = m_footer_components.size();
+		int nbrHeaderRows = mHeaderComponents.size();
+		int nbrBodyRows = mBodyComponents.size();
+		int nbrFooterRows = mFooterComponents.size();
 
 		// add the components by row.
-		GroupLayout.SequentialGroup vGroup = m_grp_lyt.createSequentialGroup();
-		for (int rr=0; rr<nbr_header_rows; rr++) {
-			GroupLayout.ParallelGroup pg = m_grp_lyt.createParallelGroup(Alignment.BASELINE);
-			for (JComponent comp : m_header_components.get(rr)) {
+		GroupLayout.SequentialGroup vGroup = groupLayout.createSequentialGroup();
+		for (int rr=0; rr<nbrHeaderRows; rr++) {
+			GroupLayout.ParallelGroup pg = groupLayout.createParallelGroup(Alignment.BASELINE);
+			for (JComponent comp : mHeaderComponents.get(rr)) {
 				pg.addComponent(comp);
 			}	// for
 			vGroup.addGroup(pg);
-		}	// for
-		for (int rr=0; rr<nbr_body_rows; rr++) {
-			GroupLayout.ParallelGroup pg = m_grp_lyt.createParallelGroup(Alignment.BASELINE);
-			for (JComponent comp : m_body_components.get(rr)) {
+		}
+		for (int rr=0; rr<nbrBodyRows; rr++) {
+			GroupLayout.ParallelGroup pg = groupLayout.createParallelGroup(Alignment.BASELINE);
+			for (JComponent comp : mBodyComponents.get(rr)) {
 				pg.addComponent(comp);
 			}	// for
 			vGroup.addGroup(pg);
-		}	// for
-		for (int rr=0; rr<nbr_footer_rows; rr++) {
-			GroupLayout.ParallelGroup pg = m_grp_lyt.createParallelGroup(Alignment.BASELINE);
-			for (JComponent comp : m_footer_components.get(rr)) {
+		}
+		for (int rr=0; rr<nbrFooterRows; rr++) {
+			GroupLayout.ParallelGroup pg = groupLayout.createParallelGroup(Alignment.BASELINE);
+			for (JComponent comp : mFooterComponents.get(rr)) {
 				pg.addComponent(comp);
 			}	// for
 			vGroup.addGroup(pg);
-		}	// for
-		m_grp_lyt.setVerticalGroup(vGroup);
+		}
+		groupLayout.setVerticalGroup(vGroup);
 
 		// add the components (again) by column
-		GroupLayout.SequentialGroup hGroup = m_grp_lyt.createSequentialGroup();
-		for (int cc=0; cc<m_nbr_columns; cc++) {
-			GroupLayout.ParallelGroup pg = m_grp_lyt.createParallelGroup();
-			for (int rr=0; rr<nbr_header_rows; rr++) {
-				ArrayList<JComponent> row = m_header_components.get(rr);
+		GroupLayout.SequentialGroup hGroup = groupLayout.createSequentialGroup();
+		for (int cc=0; cc<mNumberOfColumns; cc++) {
+			GroupLayout.ParallelGroup pg = groupLayout.createParallelGroup();
+			for (int rr=0; rr<nbrHeaderRows; rr++) {
+				List<JComponent> row = mHeaderComponents.get(rr);
 				JComponent comp = row.get(cc);
 				pg.addComponent(comp);
 			}	// for
-			for (int rr=0; rr<nbr_body_rows; rr++) {
-				ArrayList<JComponent> row = m_body_components.get(rr);
+			for (int rr=0; rr<nbrBodyRows; rr++) {
+				List<JComponent> row = mBodyComponents.get(rr);
 				JComponent comp = row.get(cc);
 				pg.addComponent(comp);
 			}	// for
-			for (int rr=0; rr<nbr_footer_rows; rr++) {
-				ArrayList<JComponent> row = m_footer_components.get(rr);
+			for (int rr=0; rr<nbrFooterRows; rr++) {
+				List<JComponent> row = mFooterComponents.get(rr);
 				JComponent comp = row.get(cc);
 				pg.addComponent(comp);
 			}	// for			
 			hGroup.addGroup(pg);
 		}	// for - every column
-		m_grp_lyt.setHorizontalGroup(hGroup);
-	}	// rebuild_layout
+		groupLayout.setHorizontalGroup(hGroup);
+	}
 
 	//--------------------------------------------------------------------------
 	/** Assume the body. */
 	public void deleteRow(int row) {
-		m_body_components.remove(row);
-		rebuild_layout();
-	}	// deleteRow
+		mBodyComponents.remove(row);
+		rebuildLayout();
+	}
 
 	//--------------------------------------------------------------------------
 	/** Assume the body. */
 	public void removeAllRows() {
-		m_body_components.clear();
-		rebuild_layout();
-	}	// deleteRow
+		mBodyComponents.clear();
+		rebuildLayout();
+	}
 
 	//--------------------------------------------------------------------------
 	/** Assume the body. */
 	public void moveRowUp(int row_index) {
-		ArrayList<JComponent> row = m_body_components.remove(row_index);
-		m_body_components.add(row_index-1,row);
-		rebuild_layout();
-	}	// moveRowUp
+		List<JComponent> row = mBodyComponents.remove(row_index);
+		mBodyComponents.add(row_index-1,row);
+		rebuildLayout();
+	}
 
 	//--------------------------------------------------------------------------
 	/** Assume the body. */
 	public void moveRowDown(int row_index) {
-		ArrayList<JComponent> row = m_body_components.remove(row_index);
-		m_body_components.add(row_index+1,row);
-		rebuild_layout();
-	}	// moveRowDown
+		List<JComponent> row = mBodyComponents.remove(row_index);
+		mBodyComponents.add(row_index+1,row);
+		rebuildLayout();
+	}
 
 	//--------------------------------------------------------------------------
 	public int getNumberOfRows(WTableSection section) {
 		switch (section) {
-			case HEADER : return(m_header_components.size());
-			case BODY : return(m_body_components.size());
-			case FOOTER : return(m_footer_components.size());
+			case HEADER : return(mHeaderComponents.size());
+			case BODY : return(mBodyComponents.size());
+			case FOOTER : return(mFooterComponents.size());
 			default : throw new IllegalArgumentException();
 		}	// switch
 	}	// getNumberOfRows
@@ -212,52 +214,52 @@ public class WTable {
 
 	//--------------------------------------------------------------------------
 	public JComponent getComponent(WTableLocation location) {
-		ArrayList<ArrayList<JComponent>> rows = m_body_components;
+		List<List<JComponent>> rows = mBodyComponents;
 		switch (location.m_section) {
-			case HEADER : rows = m_header_components;	break;
-			case FOOTER : rows = m_footer_components;	break;
-			case BODY: rows = m_body_components;	break;
-		}	// switch
-		ArrayList<JComponent> row2 = rows.get(location.m_row);
-		JComponent jcomp = row2.get(location.m_col);
+			case HEADER : rows = mHeaderComponents;	break;
+			case FOOTER : rows = mFooterComponents;	break;
+			case BODY: rows = mBodyComponents;	break;
+		}
+		List<JComponent> row2 = rows.get(location.mRow);
+		JComponent jcomp = row2.get(location.mCol);
 		return(jcomp);
-	}	// getComponent
+	}
 
 	//--------------------------------------------------------------------------
 	public JComponent getComponentFromDocument(Document doc) {
 		JComponent jcomp = get_component_from_document(WTableSection.BODY,doc);
 		if (jcomp != null) {
 			return(jcomp);
-		}	// if
+		}
 		jcomp = get_component_from_document(WTableSection.FOOTER,doc);
 		if (jcomp != null) {
 			return(jcomp);
-		}	// if
+		}
 		jcomp = get_component_from_document(WTableSection.HEADER,doc);
 		if (jcomp != null) {
 			return(jcomp);
-		}	// if
+		}
 		throw new IllegalArgumentException("Document "+doc.toString()+" not found.");
-	}	// getComponentFromDocument
+	}
 
 	//--------------------------------------------------------------------------
 	private JComponent get_component_from_document(WTableSection section, Document doc) {
-		ArrayList<ArrayList<JComponent>> comps = null;
+		List<List<JComponent>> comps = null;
 		switch (section) {
 			case HEADER : {
-				comps = m_header_components;
+				comps = mHeaderComponents;
 				break;
-			}	// case - header
+			}
 			case FOOTER : {
-				comps = m_footer_components;
+				comps = mFooterComponents;
 				break;
-			}	// case - footer
+			}
 			default : {
-				comps = m_body_components;
+				comps = mBodyComponents;
 				break;
-			}	// case - bidy
-		}	// switch
-		for (ArrayList<JComponent> row : comps) {
+			}
+		}
+		for (List<JComponent> row : comps) {
 			for (JComponent jcomp : row) {
 				if (jcomp instanceof JSpinner) {
 					JSpinner spinner = (JSpinner)jcomp;
@@ -278,22 +280,22 @@ public class WTable {
 			}	// for each component on a row
 		}	// for each row
 		return(null);
-	}	// get_component_from_document
+	}
 
 	//--------------------------------------------------------------------------
 	public WTableLocation getLocation(Component comp) {
 		JComponent jcomp = (JComponent)comp;
-		WTableLocation loc = findComponent(m_body_components,jcomp);
+		WTableLocation loc = findComponent(mBodyComponents, jcomp);
 		if (loc != null) {
 			loc.m_section = WTableSection.BODY;
 			return(loc);
 		}	// if
-		loc = findComponent(m_header_components,jcomp);
+		loc = findComponent(mHeaderComponents,jcomp);
 		if (loc != null) {
 			loc.m_section = WTableSection.HEADER;
 			return(loc);
 		}	// if
-		loc = findComponent(m_footer_components,jcomp);
+		loc = findComponent(mFooterComponents,jcomp);
 		if (loc != null) {
 			loc.m_section = WTableSection.FOOTER;
 			return(loc);
@@ -306,10 +308,10 @@ public class WTable {
 	}	// getLocation
 
 	//--------------------------------------------------------------------------
-	private WTableLocation findComponent(ArrayList<ArrayList<JComponent>> comp_rows, JComponent comp) {
-		int rows = comp_rows.size();
+	private WTableLocation findComponent(List<List<JComponent>> compRows, JComponent comp) {
+		int rows = compRows.size();
 		for (int row=0; row<rows; row++) {
-			ArrayList<JComponent> comps = comp_rows.get(row);
+			List<JComponent> comps = compRows.get(row);
 			int cols = comps.size();
 			for (int col=0; col<cols; col++) {
 				JComponent compx = comps.get(col);
@@ -317,10 +319,10 @@ public class WTable {
 					WTableLocation loc = new WTableLocation(WTableSection.BODY,row,col);
 					return(loc);
 				}	// if - we found a matching component (we don't know which section it in in
-			}	// for - each col
+			}	// for - each column
 		}	// for - each row
 		return(null);
-	}	// findComponent
+	}
 
 	//--------------------------------------------------------------------------
 	public String getFieldAsText(Component comp) {
@@ -328,62 +330,62 @@ public class WTable {
 		if (comp instanceof JTextField) {
 			val = ((JTextField)comp).getText();
 			return(val);
-		}	// if
+		}
 		if (comp instanceof JSpinner) {
 			Object obj = ((JSpinner)comp).getModel().getValue();
 			val = obj.toString();
 			return(val);
-		}	// if
+		}
 		if (comp instanceof JComboBox) {
 			Object obj = ((JComboBox)comp).getModel().getSelectedItem();
 			if (obj == null) {
-				WLog.log(Level.WARNING,"JComboBox named {0} has no selected item. the number of items is {1}.",comp.getName(),((JComboBox) comp).getItemCount());
+				log.warn("JComboBox named {} has no selected item. the number of items is {}", comp.getName(), ((JComboBox) comp).getItemCount());
 				return("");
-			}	// if 
+			} 
 			val = obj.toString();
 			return(val);
-		}	// if
+		}
 		if (comp instanceof JCheckBox) {
 			JCheckBox jcb = (JCheckBox)comp;
 			if (jcb.isSelected()) {
 				return("Y");
-			}	// if
+			}
 			return("");
-		}	// if
+		}
 		return(val);
-	}	// getFieldAsText
+	}
 
 	//--------------------------------------------------------------------------
 	public class WTableLocation {
 		public WTableSection m_section;
-		public int m_row;
-		public int m_col;
+		public int mRow;
+		public int mCol;
 		public WTableLocation(WTableSection section, int row, int column) {
 			m_section = section;
-			m_row = row;
-			m_col = column;
-		}	// WTableLocation
+			mRow = row;
+			mCol = column;
+		}
 		public String toString() {
-			return(m_section.toString() + "," + m_row + "," + m_col);
-		}	// toString
+			return(m_section.toString() + "," + mRow + "," + mCol);
+		}
 		public boolean equals(WTableLocation loc) {
 			if (m_section != loc.m_section) {
 				return(false);
-			}	// if
-			if (m_row != loc.m_row) {
+			}
+			if (mRow != loc.mRow) {
 				return(false);
-			}	// if
-			if (m_col != loc.m_col) {
+			}
+			if (mCol != loc.mCol) {
 				return(false);
-			}	// if
+			}
 			return(true);
-		}	// equals
-	}	// WTableLocation
+		}
+	}
 
 	//--------------------------------------------------------------------------
 	public enum WTableSection {
 		HEADER,
 		FOOTER,
 		BODY;
-	}	// WTableSection
-}	// Table
+	}
+}

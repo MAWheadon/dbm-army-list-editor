@@ -13,6 +13,7 @@ import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 import java.io.File;
+import java.rmi.server.Operation;
 import java.security.AccessControlException;
 import java.text.MessageFormat;
 import java.util.AbstractCollection;
@@ -39,121 +40,101 @@ import javax.swing.JTextField;
 import javax.swing.RepaintManager;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.Document;
 
-import com.maw.GUI.WTable;
-import com.maw.GUI.WTable.WTableLocation;
-import com.maw.GUI.WTable.WTableSection;
-import com.maw.armylistdesigner.ArmyListConstants;
-import com.maw.armylistdesigner.controllers.ArmyListControllerI;
-import com.maw.armylistdesigner.models.ArmyListDBMModel;
-import com.maw.util.Instructions;
-import com.maw.util.Instructions.Operation;
-import com.maw.util.RestRequest;
-import com.maw.util.WFileAccess;
-import com.maw.util.WLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import uk.org.peltast.ald.models.ArmyListDBMModel;
+import uk.org.peltast.ald.models.ArmyListModelChange;
+import uk.org.peltast.ald.swing.WTable;
+import uk.org.peltast.ald.swing.WTable.WTableLocation;
+import uk.org.peltast.ald.swing.WTable.WTableSection;
 
 /** An editor for an individual army list.
  * 
  * @author Mark Andrew Wheadon
  * @date 26th June 2012.
- * @copyright Mark Andrew Wheadon, 2012,2014.
+ * @copyright Mark Andrew Wheadon, 2012,2021.
  * @licence MIT License.
  */
-public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, ChangeListener, DocumentListener {
-	private static enum ColNo {e_opt,e_qty,e_desc,e_drill,e_type,e_grade,e_adj,e_cost,e_total,e_cmd1,e_cmd2,e_cmd3,e_cmd4,e_unused};
-	private final ArmyListDBMEditorSwing m_this = this;	// not sure how else to refer to this instance inside mouse events etc.
-	private final RestRequest m_rest_req = new RestRequest();
+public class ArmyListDBMEditorSwing implements ArmyListModelChange {
+	private static final Logger log = LoggerFactory.getLogger(ArmyListDBMEditorSwing.class);
+	private enum ColNo {OPT,QTY,DESC,DRILL,TYPE,GRADE,ADJ,COST,TOTAL,CMD1,CMD2,CMD3,CMD4,UNUSED};
 
-	private final ArmyListControllerI m_army_list_controller;
-	private final String m_army_id;	// a unique identifier for this army
-//	private JPanel m_pnl_main = new JPanel(new BorderLayout());	// buttons go in north, inner panel goes in centre.
-	private JPanel m_pnl_inner = new JPanel(new BorderLayout());
-	private JPanel m_pnl_btns = new JPanel();
-	private JPanel m_pnl_top = new JPanel();
-	private JPanel m_pnl_buttons = new JPanel();
-	private JButton m_btn_add = new JButton("Add");
-	private JButton m_btn_delete = new JButton("Delete ...");
-	private JButton m_btn_move_up = new JButton("Move up");
-	private JButton m_btn_move_down = new JButton("Move down");
-	private ButtonAddMenuListener m_btn_add_pressed = new ButtonAddMenuListener();
-	private ButtonDeleteMenuListener m_btn_delete_pressed = new ButtonDeleteMenuListener();
-	private ButtonMoveUpListener m_btn_move_up_pressed = new ButtonMoveUpListener();
-	private ButtonMoveDownListener m_btn_move_down_pressed = new ButtonMoveDownListener();
-	private JComboBox m_cb_books;
-	private JTextField m_tf_year = new JTextField(6);
-	private JTextField m_tf_description = new JTextField(20);
-	private JTextField m_tf_cost_file = new JTextField(20);
-	private Document m_army_description_doc;
-	private Document m_army_year_doc;
+	private final ArmyListDBMModel mModel;
+	private JPanel mPnlMain = new JPanel(new BorderLayout());	// buttons go in north, inner panel goes in centre.
+	private Document mArmyDescriptionDoc;
+	private Document mArmyYearDoc;
 
-	private WTable m_table = new WTable(14);
-	private JPanel m_pnl_tbl = m_table.getPanel();
-	private JScrollPane m_sp_tbl = new JScrollPane(m_pnl_tbl);
+	private WTable mTable = new WTable(14);
+	private JPanel mPnlTbl = mTable.getPanel();
+	private JScrollPane mSpTbl = new JScrollPane(mPnlTbl);
 
 	//--------------------------------------------------------------------------
-	ArmyListDBMEditorSwing(ArmyListControllerI conntroller, String army_id) {
-		m_army_list_controller = conntroller;
-		m_army_id = army_id;
-		this.setLayout(new 	BorderLayout());	// TODO: ????
-		setup_gui();
-	}	// ArmyListDBMSwing
+	ArmyListDBMEditorSwing(ArmyListDBMModel model) {
+		mModel = model;
+		mModel.setChangeListener(this);
+		setupGui();
+	}
 
 	//--------------------------------------------------------------------------
-	private void setup_gui() {
-		JButton btn = new JButton("Close");
-		m_pnl_btns.add(btn);
-		btn.addActionListener(this);
-		btn = new JButton("Copy");
-		m_pnl_btns.add(btn);
-		btn.addActionListener(this);
-		btn = new JButton("Print ...");
-		m_pnl_btns.add(btn);
-		btn.addActionListener(this);
-		btn = new JButton("Export to txt ...");
-		m_pnl_btns.add(btn);
-		btn.addActionListener(this);
-		btn = new JButton("Delete ...");
-		m_pnl_btns.add(btn);
-		btn.addActionListener(this);
-		add(m_pnl_btns,BorderLayout.NORTH);
-		add(m_pnl_inner,BorderLayout.CENTER);
+	private void setupGui() {
+		JButton btnClose = new JButton("Close");
+		JButton btnPrint = new JButton("Print ...");
+		JButton btnExport = new JButton("Export to txt ...");
+		JPanel pnlTopBtns = new JPanel();
+		pnlTopBtns.add(btnClose);
+		pnlTopBtns.add(btnPrint);
+		pnlTopBtns.add(btnExport);
+		btnClose.addActionListener(this::doButtonClose);
+		btnPrint.addActionListener(this::doButtonPrint);
+		btnExport.addActionListener(this::doButtonExportToText);
 
-		m_pnl_inner.add(m_pnl_top,BorderLayout.NORTH);
-		m_pnl_top.add(new JLabel("Book"));
-		m_cb_books = new JComboBox();
-		m_cb_books.addActionListener(m_this);
-		m_army_year_doc = m_tf_year.getDocument();
-		m_army_year_doc.addDocumentListener(m_this);
-		m_army_description_doc = m_tf_description.getDocument();
-		m_army_description_doc.addDocumentListener(m_this);
-		m_tf_cost_file.setEditable(false);
-		m_pnl_top.add(m_cb_books);
-		m_pnl_top.add(new JLabel("        Year"));
-		m_pnl_top.add(m_tf_year);
-		m_pnl_top.add(new JLabel("        Army"));
-		m_pnl_top.add(m_tf_description);
-		m_pnl_top.add(new JLabel("        Cost file"));
-		m_pnl_top.add(m_tf_cost_file);
+		mPnlMain.add(pnlTopBtns,BorderLayout.NORTH);
+		String armyId = mModel.getArmyId();
+		mPnlMain.setName(armyId);
+		
+		// Central panel
+		JPanel pnlCentral = new JPanel();
+		mPnlMain.add(pnlCentral,BorderLayout.CENTER);
 
-		m_pnl_inner.add(m_pnl_buttons,BorderLayout.SOUTH);
-		m_pnl_buttons.add(m_btn_add);
-		m_pnl_buttons.add(m_btn_delete);
-		m_pnl_buttons.add(m_btn_move_up);
-		m_pnl_buttons.add(m_btn_move_down);
-		m_btn_add.addActionListener(m_btn_add_pressed);
-		m_btn_delete.addActionListener(m_btn_delete_pressed);
-		m_btn_move_up.addActionListener(m_btn_move_up_pressed);
-		m_btn_move_down.addActionListener(m_btn_move_down_pressed);
-		enable_delete_and_move_buttons();
+		mPnlCentral.add(mPnlTop,BorderLayout.NORTH);
+		mPnlTop.add(new JLabel("Book"));
+		mCbBooks.addActionListener(m_this);
+		mArmyYearDoc = mTfYear.getDocument();
+		mArmyYearDoc.addDocumentListener(m_this);
+		mArmyDescriptionDoc = mTfDescription.getDocument();
+		mArmyDescriptionDoc.addDocumentListener(m_this);
+		mTfCostFile.setEditable(false);
+		mPnlTop.add(mCbBooks);
+		mPnlTop.add(new JLabel("        Year"));
+		mPnlTop.add(mTfYear);
+		mPnlTop.add(new JLabel("        Army"));
+		mPnlTop.add(mTfDescription);
+		mPnlTop.add(new JLabel("        Cost file"));
+		mPnlTop.add(mTfCostFile);
+
+		mPnlCentral.add(mPnlListBtns,BorderLayout.SOUTH);
+		JButton btnAdd = new JButton("Add");
+		JButton btnDelete = new JButton("Delete");
+		JButton btnMoveUp = new JButton("Move up");
+		JButton btnMoveDown = new JButton("Move down");
+		btnAdd.addActionListener(this::doButtonAdd);
+		btnDelete.addActionListener(this::doButtonDelete);
+		btnMoveUp.addActionListener(this::doButtonMoveUp);
+		btnMoveDown.addActionListener(this::doButtonMoveDown);
+		mPnlListBtns.add(btnAdd);
+		mPnlListBtns.add(btnDelete);
+		mPnlListBtns.add(btnMoveUp);
+		mPnlListBtns.add(btnMoveDown);
+		enableDeleteAndMoveButtons();
 
 		String[] headings = new String[] {"?","Qty","Description","Drill","Type","Grade","Adjustment","Cost","Total","Cmd 1","Cmd 2","Cmd 3","Cmd 4","Unused"};
-		m_table.addRow(WTableSection.HEADER,headings);
-		m_pnl_inner.add(m_sp_tbl,BorderLayout.CENTER);
+		mTable.addRow(WTableSection.HEADER,headings);
+		mPnlCentral.add(mSpTbl,BorderLayout.CENTER);
 
 		JLabel lbl = new JLabel("");
 		JTextField tf_qty = new JTextField("");
@@ -169,7 +150,7 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 		JTextField tf_cmd4 = new JTextField("");
 		tf_cmd4.setEditable(false);
 		JComponent[] arr = new JComponent[] {lbl,tf_qty,lbl,lbl,lbl,lbl,lbl,lbl,tf_costs,tf_cmd1,tf_cmd2,tf_cmd3,tf_cmd4,lbl};
-		m_table.addRow(WTableSection.FOOTER,arr);
+		mTable.addRow(WTableSection.FOOTER,arr);
 
 		JTextField tf_army_equiv= new JTextField("");
 		tf_army_equiv.setEditable(false);
@@ -182,7 +163,7 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 		JTextField tf_ee_cmd4 = new JTextField("");
 		tf_ee_cmd4.setEditable(false);
 		JComponent[] arr2 = new JComponent[] {lbl,tf_army_equiv,new JLabel("(equivalents)"),lbl,lbl,lbl,lbl,lbl,new JLabel("Equivalents:"),tf_ee_cmd1,tf_ee_cmd2,tf_ee_cmd3,tf_ee_cmd4,lbl};
-		m_table.addRow(WTableSection.FOOTER,arr2);
+		mTable.addRow(WTableSection.FOOTER,arr2);
 
 		JTextField tf_half_army= new JTextField("");
 		tf_half_army.setEditable(false);
@@ -195,27 +176,19 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 		JTextField tf_ha_cmd4 = new JTextField("");
 		tf_ha_cmd4.setEditable(false);
 		JComponent[] arr3 = new JComponent[] {lbl,tf_half_army,new JLabel("(half the army)"),lbl,lbl,lbl,lbl,lbl,new JLabel("Break points:"),tf_ha_cmd1,tf_ha_cmd2,tf_ha_cmd3,tf_ha_cmd4,lbl};
-		m_table.addRow(WTableSection.FOOTER,arr3);
+		mTable.addRow(WTableSection.FOOTER,arr3);
 
 		// get the data
-		m_rest_req.setRequest(RestRequest.Operation.READ,ArmyListConstants.c_army_list,m_army_id);
+		m_rest_req.setRequest(RestRequest.Operation.READ,ArmyListConstants.c_army_list,mArmyId);
 		Instructions instructions = m_army_list_controller.processRequest(m_rest_req);
 		process_update(instructions);
-	}	// setup_gui
+	}
 
 	//--------------------------------------------------------------------------
 	@Override
 	public void actionPerformed(ActionEvent ae) {
 		String cmd = ae.getActionCommand();
 		Instructions instructions = new Instructions();
-
-		if (cmd.equals("Close")) {
-			m_instructions.clear();
-			m_instructions.addInstruction(Instructions.Operation.DELETE,ArmyListConstants.c_tab,ArmyListConstants.c_army_id,m_army_id);
-			String update = instructions.serialiseAsString();
-			m_army_list_conntroller.processUpdate(update);
-			return;
-		}	// if - close
 
 		if (cmd.equals("Copy")) {
 			try {
@@ -228,81 +201,7 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 			return;
 		}	// if - copy
 
-		if (cmd.equals("Export to txt ...")) {
-			String dir_path = getArmyListPath();
-			JFileChooser chooser = new JFileChooser(dir_path);
-			if (m_army_list_path != null) {
-				chooser.setCurrentDirectory(new File(m_army_list_path));
-				String name = WFileAccess.getPathFileName(m_army_list_path);
-				int ii = name.lastIndexOf('.');
-				if (ii > 0) {
-					name = name.substring(0,ii);
-				}	// if
-				name += ".txt";
-				File ff = new File(name);
-				chooser.setSelectedFile(ff);
-			}	// if
-			FileNameExtensionFilter filter = new FileNameExtensionFilter("Exported DBM army list", "txt");
-			chooser.setFileFilter(filter);
-			int ret = chooser.showSaveDialog(this);
-			if (ret != JFileChooser.APPROVE_OPTION) {
-				return;
-			}	// if
-			File export_txt_file = chooser.getSelectedFile();
-			try {
-				m_army_list_dbm_model.export_to_txt(export_txt_file.getPath());
-			}	// try
-			catch (Exception e) {
-				WLog.log(Level.WARNING,e);
-				error_message("Error: "+e);
-			}	// catch
-			return;
-		}	// if - Export to txt
 
-		if (cmd.equals("Print ...")) {
-			try {
-				PrintRequestAttributeSet prt_rqs_att_set = new HashPrintRequestAttributeSet();
-				PrinterJob pj = null;
-				try {
-					pj = PrinterJob.getPrinterJob();
-				}	// try
-				catch (AccessControlException ace) {
-					WLog.log(Level.WARNING,"Error trying to print:",ace);
-					JOptionPane.showMessageDialog(this,"Sorry, you do not appear to have authority to print.","Printing Error",JOptionPane.WARNING_MESSAGE);
-					return;
-				}	// catch
-//					check_page_format(pj);
-				Book bk = new Book();
-				int nbr_of_pages = 1;
-				page_printer pp = new page_printer();
-				PageFormat page_fmt = pj.defaultPage();
-				bk.append(pp,page_fmt,nbr_of_pages);
-				pj.setPageable(bk);
-				boolean ok = pj.printDialog(prt_rqs_att_set);
-				if (ok) {
-					try {
-						WLog.log(Level.INFO,"About to print.","");
-						RepaintManager currentManager = RepaintManager.currentManager(this);
-						boolean dbl_buf = currentManager.isDoubleBufferingEnabled();
-						if (dbl_buf) {
-							currentManager.setDoubleBufferingEnabled(false);
-						}	// if
-						pj.print(prt_rqs_att_set);
-						if (dbl_buf) {
-							currentManager.setDoubleBufferingEnabled(true);
-						}	// if
-					}	// try
-					catch (PrinterException pe) {
-						WLog.log(Level.WARNING,"Printer error.",pe);
-					}	// catch
-				}	// if - user okayed print dialog
-			}	// try
-			catch (Throwable t) {
-				WLog.log(Level.WARNING,"Error trying to print:",t);
-				JOptionPane.showMessageDialog(this, t.toString(), "Printing Error", JOptionPane.WARNING_MESSAGE);
-			}	// catch
-			return;				
-		}	// print
 
 		if (cmd.equals("Delete ...")) {
 			try {
@@ -323,47 +222,46 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 		Object obj = ae.getSource();
 		JComponent jc = (JComponent)obj;
 		if (jc instanceof JCheckBox) {
-			enable_delete_and_move_buttons();
+			enableDeleteAndMoveButtons();
 		}	// if - one of the check boxes
 		else {
 			// check to see if one of the north components
 			String updates = null;
 			m_changed = true;
-			if (jc == m_cb_books) {
-				String book = (String)m_cb_books.getSelectedItem();
+			if (jc == mCbBooks) {
+				String book = (String)mCbBooks.getSelectedItem();
 				m_army_list_dbm_model.processInput(e_rqs.put.toString(),ArmyListConstants.c_army_book,book);
 			}
 			else {
-				WTableLocation loc = m_table.getLocation(jc);
+				WTableLocation loc = mTable.getLocation(jc);
 				updates = send_change(loc);
 			}	// else
 			if (updates != null && updates.length() > 0) {
 				process_update(updates);
 			}	// if
 		}	// else - not a checkbox
-
-	}	// actionPerformed
+	}
 
 	//--------------------------------------------------------------------------
-	private void enable_delete_and_move_buttons() {
-		int checked_count = 0;
-		int row_count = m_table.getNumberOfRows(WTableSection.BODY);
-		for (int row_nbr=0; row_nbr<row_count; row_nbr++) {
-			String chk = m_table.getValue(WTableSection.BODY,row_nbr,0);
+	private void enableDeleteAndMoveButtons() {
+		int checkedCount = 0;
+		int rowCount = mTable.getNumberOfRows(WTableSection.BODY);
+		for (int row_nbr=0; row_nbr<rowCount; row_nbr++) {
+			String chk = mTable.getValue(WTableSection.BODY,row_nbr,0);
 			if (chk.length() > 0) {
-				checked_count++;
+				checkedCount++;
 			}	// if
 		}	// for - each row
-		m_btn_delete.setEnabled(checked_count>0);
-		if (checked_count == 0) {
-			m_btn_move_down.setEnabled(false);
-			m_btn_move_up.setEnabled(false);
+		mBtnDelete.setEnabled(checkedCount>0);
+		if (checkedCount == 0) {
+			mBtnMoveDown.setEnabled(false);
+			mBtnMoveUp.setEnabled(false);
 		}	// if
 		else {
-			String chk = m_table.getValue(WTableSection.BODY,0,0);	// top row
-			m_btn_move_up.setEnabled(chk.length() <= 0);
-			chk = m_table.getValue(WTableSection.BODY,row_count-1,0);	// bottom row
-			m_btn_move_down.setEnabled(chk.length() <= 0);
+			String chk = mTable.getValue(WTableSection.BODY,0,0);	// top row
+			mBtnMoveUp.setEnabled(chk.length() <= 0);
+			chk = mTable.getValue(WTableSection.BODY,rowCount-1,0);	// bottom row
+			mBtnMoveDown.setEnabled(chk.length() <= 0);
 		}	// else
 	}	// enable_delete_and_move_buttons
 
@@ -382,17 +280,17 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 
 			ret = PAGE_EXISTS;
 			g2d.setFont(font_heading);
-			String str = m_tf_description.getText();
+			String str = mTfDescription.getText();
 			g2d.drawString(str,c_left_margin_1,100);
-			str = m_tf_year.getText();
+			str = mTfYear.getText();
 			g2d.drawString(str,c_left_margin_1+200,100);
-			str = (String)m_cb_books.getSelectedItem();
+			str = (String)mCbBooks.getSelectedItem();
 			g2d.drawString(str,c_left_margin_1+275,100);
 			g2d.drawLine(0,105,2000,105);
-			String total_cost = m_table.getValue(WTableSection.FOOTER,0,ColNo.e_total.ordinal());
-			String total_qty = m_table.getValue(WTableSection.FOOTER,0,ColNo.e_qty.ordinal());
-			String total_el_eq = m_table.getValue(WTableSection.FOOTER,1,ColNo.e_qty.ordinal());
-			String half_army = m_table.getValue(WTableSection.FOOTER,2,ColNo.e_qty.ordinal());
+			String total_cost = mTable.getValue(WTableSection.FOOTER,0,ColNo.TOTAL.ordinal());
+			String total_qty = mTable.getValue(WTableSection.FOOTER,0,ColNo.QTY.ordinal());
+			String total_el_eq = mTable.getValue(WTableSection.FOOTER,1,ColNo.QTY.ordinal());
+			String half_army = mTable.getValue(WTableSection.FOOTER,2,ColNo.QTY.ordinal());
 			str = MessageFormat.format("{0} total cost, {1} total elements, {2} equivalents, half the army is {3} elements",total_cost,total_qty,total_el_eq,half_army);
 			g2d.setFont(font_plain);
 			g2d.drawString(str,c_left_margin_1,120);
@@ -414,19 +312,19 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 		final int c_line_height = 16;
 		Font font_heading = new Font("Arial", Font.BOLD, 10);
 		Font font_plain = new Font("Arial", Font.PLAIN, 8);
-		int row_count = m_table.getNumberOfRows(WTableSection.BODY);
+		int row_count = mTable.getNumberOfRows(WTableSection.BODY);
 		boolean cmd_heading_printed = false;
 		for (int rr=0; rr<row_count; rr++) {
-			String str = m_table.getValue(WTableSection.BODY,rr,ColNo.e_cmd1.ordinal()-1+cmd);
+			String str = mTable.getValue(WTableSection.BODY,rr,ColNo.CMD1.ordinal()-1+cmd);
 			int cmd_qty = str.length()>0 ? Integer.parseInt(str) : 0;
 			if (cmd_qty == 0) {
 				continue;
 			}	// if - no elements for this row in this command so skip
-			String desc = m_table.getValue(WTableSection.BODY,rr,ColNo.e_desc.ordinal());
-			String drill = m_table.getValue(WTableSection.BODY,rr,ColNo.e_drill.ordinal());
-			String type = m_table.getValue(WTableSection.BODY,rr,ColNo.e_type.ordinal());
-			String grade = m_table.getValue(WTableSection.BODY,rr,ColNo.e_grade.ordinal());
-			String adj = m_table.getValue(WTableSection.BODY,rr,ColNo.e_adj.ordinal());
+			String desc = mTable.getValue(WTableSection.BODY,rr,ColNo.DESC.ordinal());
+			String drill = mTable.getValue(WTableSection.BODY,rr,ColNo.DRILL.ordinal());
+			String type = mTable.getValue(WTableSection.BODY,rr,ColNo.TYPE.ordinal());
+			String grade = mTable.getValue(WTableSection.BODY,rr,ColNo.GRADE.ordinal());
+			String adj = mTable.getValue(WTableSection.BODY,rr,ColNo.ADJ.ordinal());
 			if (cmd_heading_printed == false) {
 				g2d.setFont(font_heading);
 				g2d.drawString("Command "+cmd,left_margin,yy);
@@ -439,9 +337,9 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 			yy += c_line_height;
 		}	// for - each row
 		if (cmd_heading_printed) {
-			String total_el = m_table.getValue(WTableSection.FOOTER,0,ColNo.e_cmd1.ordinal()-1+cmd);
-			String eq = m_table.getValue(WTableSection.FOOTER,1,ColNo.e_cmd1.ordinal()-1+cmd);
-			String break_point = m_table.getValue(WTableSection.FOOTER,2,ColNo.e_cmd1.ordinal()-1+cmd);
+			String total_el = mTable.getValue(WTableSection.FOOTER,0,ColNo.CMD1.ordinal()-1+cmd);
+			String eq = mTable.getValue(WTableSection.FOOTER,1,ColNo.CMD1.ordinal()-1+cmd);
+			String break_point = mTable.getValue(WTableSection.FOOTER,2,ColNo.CMD1.ordinal()-1+cmd);
 			String str = MessageFormat.format("{0} total elements,  break point is {1}",total_el,break_point);
 			yy += c_line_height / 2;
 			g2d.drawString(str,left_margin,yy);
@@ -474,17 +372,107 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 	}	// print_table_top_grid
 
 	//--------------------------------------------------------------------------
-	private class ButtonAddMenuListener implements ActionListener {
-		@Override
-		public void actionPerformed(ActionEvent ae) {
-			int row = m_army_list_dbm_model.addRowBefore(999);
-			add_row(null);
-			validate();
-		}	// actionPerformed
-	}	// MenuListener
+	private void doButtonAdd(ActionEvent ae) {
+		mModel.addRow();
+		addRow(null);
+		validate();
+	}
 
 	//--------------------------------------------------------------------------
-	private void add_row(Map<String,Object> row_map) {
+	private void doButtonClose(ActionEvent ae) {
+	}
+
+	//--------------------------------------------------------------------------
+	private void doButtonDelete(ActionEvent ae) {
+	}
+
+	//--------------------------------------------------------------------------
+	private void doButtonExportToText(ActionEvent ae) {
+		String dir_path = getArmyListPath();
+		JFileChooser chooser = new JFileChooser(dir_path);
+		if (m_army_list_path != null) {
+			chooser.setCurrentDirectory(new File(m_army_list_path));
+			String name = WFileAccess.getPathFileName(m_army_list_path);
+			int ii = name.lastIndexOf('.');
+			if (ii > 0) {
+				name = name.substring(0,ii);
+			}	// if
+			name += ".txt";
+			File ff = new File(name);
+			chooser.setSelectedFile(ff);
+		}	// if
+		FileNameExtensionFilter filter = new FileNameExtensionFilter("Exported DBM army list", "txt");
+		chooser.setFileFilter(filter);
+		int ret = chooser.showSaveDialog(this);
+		if (ret != JFileChooser.APPROVE_OPTION) {
+			return;
+		}	// if
+		File export_txt_file = chooser.getSelectedFile();
+		try {
+			m_army_list_dbm_model.export_to_txt(export_txt_file.getPath());
+		}	// try
+		catch (Exception e) {
+			WLog.log(Level.WARNING,e);
+			error_message("Error: "+e);
+		}	// catch
+		return;
+	}
+
+	//--------------------------------------------------------------------------
+	private void doButtonMoveDown(ActionEvent ae) {
+	}
+
+	//--------------------------------------------------------------------------
+	private void doButtonMoveUp(ActionEvent ae) {
+	}
+
+	//--------------------------------------------------------------------------
+	private void doButtonPrint(ActionEvent ae) {
+		try {
+			PrintRequestAttributeSet prt_rqs_att_set = new HashPrintRequestAttributeSet();
+			PrinterJob pj = null;
+			try {
+				pj = PrinterJob.getPrinterJob();
+			}
+			catch (AccessControlException ace) {
+				log.warning("Error trying to print:",ace);
+				JOptionPane.showMessageDialog(this,"Sorry, you do not appear to have authority to print.","Printing Error",JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+			Book bk = new Book();
+			int nbr_of_pages = 1;
+			page_printer pp = new page_printer();
+			PageFormat page_fmt = pj.defaultPage();
+			bk.append(pp,page_fmt,nbr_of_pages);
+			pj.setPageable(bk);
+			boolean ok = pj.printDialog(prt_rqs_att_set);
+			if (ok) {
+				try {
+					WLog.log(Level.INFO,"About to print.","");
+					RepaintManager currentManager = RepaintManager.currentManager(this);
+					boolean dbl_buf = currentManager.isDoubleBufferingEnabled();
+					if (dbl_buf) {
+						currentManager.setDoubleBufferingEnabled(false);
+					}	// if
+					pj.print(prt_rqs_att_set);
+					if (dbl_buf) {
+						currentManager.setDoubleBufferingEnabled(true);
+					}	// if
+				}	// try
+				catch (PrinterException pe) {
+					WLog.log(Level.WARNING,"Printer error.",pe);
+				}	// catch
+			}	// if - user okayed print dialog
+		}	// try
+		catch (Throwable t) {
+			WLog.log(Level.WARNING,"Error trying to print:",t);
+			JOptionPane.showMessageDialog(this, t.toString(), "Printing Error", JOptionPane.WARNING_MESSAGE);
+		}	// catch
+		return;				
+	}
+
+	//--------------------------------------------------------------------------
+	private void addRow(Map<String,Object> rowMap) {
 		// set all values, mostly defaulted
 		int qty = 0;
 		String desc = "";
@@ -496,17 +484,17 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 		int cmd2_qty = 0;
 		int cmd3_qty = 0;
 		int cmd4_qty = 0;
-		if (row_map != null) {
-			qty = get_map_value(row_map,ArmyListConstants.QTY,qty);
-			desc = get_map_value(row_map,ArmyListConstants.DESC,desc);
-			drill = get_map_value(row_map,ArmyListConstants.DRILL,drill);
-			type = get_map_value(row_map,ArmyListConstants.TYPE,type);
-			grade = get_map_value(row_map,ArmyListConstants.GRADE,grade);
-			adj = get_map_value(row_map,ArmyListConstants.ADJUSTMENT,adj);
-			cmd1_qty = get_map_value(row_map,ArmyListConstants.ROW_CMD1_QTY,cmd1_qty);
-			cmd2_qty = get_map_value(row_map,ArmyListConstants.ROW_CMD2_QTY,cmd2_qty);
-			cmd3_qty = get_map_value(row_map,ArmyListConstants.ROW_CMD3_QTY,cmd3_qty);
-			cmd4_qty = get_map_value(row_map,ArmyListConstants.ROW_CMD4_QTY,cmd4_qty);
+		if (rowMap != null) {
+			qty = getMapValue(rowMap,ArmyListConstants.QTY,qty);
+			desc = getMapValue(rowMap,ArmyListConstants.DESC,desc);
+			drill = getMapValue(rowMap,ArmyListConstants.DRILL,drill);
+			type = getMapValue(rowMap,ArmyListConstants.TYPE,type);
+			grade = getMapValue(rowMap,ArmyListConstants.GRADE,grade);
+			adj = getMapValue(rowMap,ArmyListConstants.ADJUSTMENT,adj);
+			cmd1_qty = getMapValue(rowMap,ArmyListConstants.ROW_CMD1_QTY,cmd1_qty);
+			cmd2_qty = getMapValue(rowMap,ArmyListConstants.ROW_CMD2_QTY,cmd2_qty);
+			cmd3_qty = getMapValue(rowMap,ArmyListConstants.ROW_CMD3_QTY,cmd3_qty);
+			cmd4_qty = getMapValue(rowMap,ArmyListConstants.ROW_CMD4_QTY,cmd4_qty);
 		}	// if - setting an existing row rather than inserting a blank row
 
 		JCheckBox chk_box = new JCheckBox();
@@ -576,7 +564,7 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 				tf_cost_total,
 				spnr_cmd1, spnr_cmd2, spnr_cmd3, spnr_cmd4,
 				tf_elements_unused};
-		m_table.addRow(WTableSection.BODY,arr);
+		mTable.addRow(WTableSection.BODY,arr);
 
 		// Now set values into the row to force recalculation
 		if (drill.length() > 0) {
@@ -603,40 +591,45 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 	}	// add_row
 
 	//--------------------------------------------------------------------------
-	private String get_map_value(Map<String,Object> map, String key, String dft) {
+	private String getMapValue(Map<String,Object> map, String key, String dft) {
 		String ret = dft;
 		if (map.containsKey(key)) {
 			ret = (String)map.get(key);
 		}	// if
 		return(ret);
-	}	// get_map_value
+	}
 
 	//--------------------------------------------------------------------------
-	private int get_map_value(Map<String,Object> map, String key, int dft) {
+	private int getMapValue(Map<String,Object> map, String key, int dft) {
 		int ret = dft;
 		if (map.containsKey(key)) {
 			ret = (Integer)map.get(key);
 		}	// if
 		return(ret);
-	}	// get_map_value
+	}
+
+	//--------------------------------------------------------------------------
+	JPanel getJPanel() {
+		return(mPnlMain);
+	}
 
 	//--------------------------------------------------------------------------
 	private class ButtonDeleteMenuListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent ae) {
-			int row_count = m_table.getNumberOfRows(WTableSection.BODY);
+			int row_count = mTable.getNumberOfRows(WTableSection.BODY);
 			// we delete rows from the bottom up so the row numbers don't change.
 			for (int row_nbr=row_count-1; row_nbr>=0; row_nbr--) {
-				String chk = m_table.getValue(WTableSection.BODY,row_nbr,0);
+				String chk = mTable.getValue(WTableSection.BODY,row_nbr,0);
 				if (chk.length() > 0) {
-					m_table.deleteRow(row_nbr);
+					mTable.deleteRow(row_nbr);
 					String updates = m_army_list_dbm_model.deleteRow(row_nbr);
 					if (updates != null && updates.length() > 0) {
 						process_update(updates);
 					}	// if
 				}	// if
 			}	// for - each row
-			enable_delete_and_move_buttons();	// there won't be any checked rows now
+			enableDeleteAndMoveButtons();	// there won't be any checked rows now
 		}	// actionPerformed
 	}	// MenuListener
 
@@ -644,17 +637,17 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 	private class ButtonMoveUpListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent ae) {
-			int row_count = m_table.getNumberOfRows(WTableSection.BODY);
+			int row_count = mTable.getNumberOfRows(WTableSection.BODY);
 			for (int row_nbr=0; row_nbr<row_count; row_nbr++) {
-				String chk = m_table.getValue(WTableSection.BODY,row_nbr,0);
+				String chk = mTable.getValue(WTableSection.BODY,row_nbr,0);
 				if (chk.length() > 0) {
 					if (row_nbr > 0) {
-						m_table.moveRowUp(row_nbr);
+						mTable.moveRowUp(row_nbr);
 						m_army_list_dbm_model.moveRowUp(row_nbr);
 					}	// if
 				}	// if
 			}	// for - each row
-			enable_delete_and_move_buttons();	// there won't be any checked rows now
+			enableDeleteAndMoveButtons();	// there won't be any checked rows now
 		}	// actionPerformed
 	}	// ButtonMoveUpListener
 
@@ -662,18 +655,18 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 	private class ButtonMoveDownListener implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent ae) {
-			int row_count = m_table.getNumberOfRows(WTableSection.BODY);
+			int row_count = mTable.getNumberOfRows(WTableSection.BODY);
 			// move rows down the bottom up so checked rows don't trip over each other.
 			for (int row_nbr=row_count-1; row_nbr>=0; row_nbr--) {
-				String chk = m_table.getValue(WTableSection.BODY,row_nbr,0);
+				String chk = mTable.getValue(WTableSection.BODY,row_nbr,0);
 				if (chk.length() > 0) {
 					if (row_nbr < row_count-1) {
-						m_table.moveRowDown(row_nbr);
+						mTable.moveRowDown(row_nbr);
 						m_army_list_dbm_model.moveRowDown(row_nbr);
 					}	// if
 				}	// if
 			}	// for - each row
-			enable_delete_and_move_buttons();	// there won't be any checked rows now
+			enableDeleteAndMoveButtons();	// there won't be any checked rows now
 		}	// actionPerformed
 	}	// ButtonMoveDownListener
 
@@ -684,7 +677,7 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 	 * @return A YAML string of side effect changes (e.g. updated totals).
 	 */
 	private String send_change(WTableLocation loc) {
-		String data = m_table.getValue(loc.m_section,loc.m_row,loc.m_col);
+		String data = mTable.getValue(loc.m_section,loc.m_row,loc.m_col);
 		String out = null;
 		if (loc.m_section == WTableSection.BODY) {
 			switch (loc.m_col) {
@@ -734,7 +727,7 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 						row_nbr = (Integer)row_map.get(ArmyListConstants.ID);
 					}	// if - the row number is specified
 					else {
-						add_row(row_map);
+						addRow(row_map);
 						continue;
 					}	// else
 					while (row_iter.hasNext()) {
@@ -745,11 +738,11 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 							row_value = (String)row_obj.toString();
 						}	// 
 						if (row_key.equals(ArmyListConstants.QTY)) {
-							m_table.setValue(WTableSection.BODY,row_nbr,ColNo.e_qty.ordinal(),row_value);
+							mTable.setValue(WTableSection.BODY,row_nbr,ColNo.QTY.ordinal(),row_value);
 							continue;
 						}	// if
 						if (row_key.equals(ArmyListConstants.DESC)) {
-							m_table.setValue(WTableSection.BODY,row_nbr,ColNo.e_desc.ordinal(),row_value);
+							mTable.setValue(WTableSection.BODY,row_nbr,ColNo.DESC.ordinal(),row_value);
 							continue;
 						}	// if
 						if (row_key.equals(ArmyListConstants.DRILL)) {
@@ -774,31 +767,31 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 							continue;
 						}	// if
 						if (row_key.equals(ArmyListConstants.ELEMENT_COST)) {
-							m_table.setValue(WTableSection.BODY,row_nbr,ColNo.e_cost.ordinal(),row_value);
+							mTable.setValue(WTableSection.BODY,row_nbr,ColNo.COST.ordinal(),row_value);
 							continue;
 						}	// if
 						if (row_key.equals(ArmyListConstants.TOTAL_COST)) {
-							m_table.setValue(WTableSection.BODY,row_nbr,ColNo.e_total.ordinal(),row_value);
+							mTable.setValue(WTableSection.BODY,row_nbr,ColNo.TOTAL.ordinal(),row_value);
 							continue;
 						}	// if
 						if (row_key.equals(ArmyListConstants.ROW_CMD1_QTY)) {
-							m_table.setValue(WTableSection.BODY,row_nbr,ColNo.e_cmd1.ordinal(),row_value);
+							mTable.setValue(WTableSection.BODY,row_nbr,ColNo.CMD1.ordinal(),row_value);
 							continue;
 						}	// if
 						if (row_key.equals(ArmyListConstants.ROW_CMD2_QTY)) {
-							m_table.setValue(WTableSection.BODY,row_nbr,ColNo.e_cmd2.ordinal(),row_value);
+							mTable.setValue(WTableSection.BODY,row_nbr,ColNo.CMD2.ordinal(),row_value);
 							continue;
 						}	// if
 						if (row_key.equals(ArmyListConstants.ROW_CMD3_QTY)) {
-							m_table.setValue(WTableSection.BODY,row_nbr,ColNo.e_cmd3.ordinal(),row_value);
+							mTable.setValue(WTableSection.BODY,row_nbr,ColNo.CMD3.ordinal(),row_value);
 							continue;
 						}	// if
 						if (row_key.equals(ArmyListConstants.ROW_CMD4_QTY)) {
-							m_table.setValue(WTableSection.BODY,row_nbr,ColNo.e_cmd4.ordinal(),row_value);
+							mTable.setValue(WTableSection.BODY,row_nbr,ColNo.CMD4.ordinal(),row_value);
 							continue;
 						}	// if
 						if (row_key.equals(ArmyListConstants.c_row_qty_unused)) {
-							m_table.setValue(WTableSection.BODY,row_nbr,ColNo.e_unused.ordinal(),row_value);
+							mTable.setValue(WTableSection.BODY,row_nbr,ColNo.UNUSED.ordinal(),row_value);
 							continue;
 						}	// if
 					}	// while
@@ -811,63 +804,63 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 			}	// if
 			String value = obj.toString();
 			if (key.equals(ArmyListConstants.c_army_book)) {
-				m_cb_books.setSelectedItem(value);
+				mCbBooks.setSelectedItem(value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_army_name)) {
-				m_tf_description.setText(value);
+				mTfDescription.setText(value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_army_year)) {
-				m_tf_year.setText(value);
+				mTfYear.setText(value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_total_qty)) {
-				m_table.setValue(WTableSection.FOOTER,0,ColNo.e_qty.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,0,ColNo.QTY.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_total_equiv)) {
-				m_table.setValue(WTableSection.FOOTER,1,ColNo.e_qty.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,1,ColNo.QTY.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_half_army)) {
-				m_table.setValue(WTableSection.FOOTER,2,ColNo.e_qty.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,2,ColNo.QTY.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_total_cost)) {
-				m_table.setValue(WTableSection.FOOTER,0,ColNo.e_total.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,0,ColNo.TOTAL.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_cmd1_total_qty)) {
-				m_table.setValue(WTableSection.FOOTER,0,ColNo.e_cmd1.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,0,ColNo.CMD1.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_cmd2_total_qty)) {
-				m_table.setValue(WTableSection.FOOTER,0,ColNo.e_cmd2.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,0,ColNo.CMD2.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_cmd3_total_qty)) {
-				m_table.setValue(WTableSection.FOOTER,0,ColNo.e_cmd3.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,0,ColNo.CMD3.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_cmd4_total_qty)) {
-				m_table.setValue(WTableSection.FOOTER,0,ColNo.e_cmd4.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,0,ColNo.CMD4.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_cmd1_break_point)) {
-				m_table.setValue(WTableSection.FOOTER,2,ColNo.e_cmd1.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,2,ColNo.CMD1.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_cmd2_break_point)) {
-				m_table.setValue(WTableSection.FOOTER,2,ColNo.e_cmd2.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,2,ColNo.CMD2.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_cmd3_break_point)) {
-				m_table.setValue(WTableSection.FOOTER,2,ColNo.e_cmd3.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,2,ColNo.CMD3.ordinal(),value);
 				continue;
 			}	// if
 			if (key.equals(ArmyListConstants.c_cmd4_break_point)) {
-				m_table.setValue(WTableSection.FOOTER,2,ColNo.e_cmd4.ordinal(),value);
+				mTable.setValue(WTableSection.FOOTER,2,ColNo.CMD4.ordinal(),value);
 				continue;
 			}	// if
 		}	// while - for each key (outside rows)
@@ -879,7 +872,7 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 	 * @param row_nbr The row number in the table.
 	 * @param row_obj A List of values (String).	 */
 	private void update_combo(int row_nbr, int col_nbr, Object row_obj) {
-		JComponent jc = m_table.getComponent(WTableSection.BODY,row_nbr,col_nbr);
+		JComponent jc = mTable.getComponent(WTableSection.BODY,row_nbr,col_nbr);
 		JComboBox cb = (JComboBox)jc;
 		ActionListener[] als = cb.getActionListeners();
 		for (ActionListener al : als) {
@@ -928,7 +921,7 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 		Object obj = ce.getSource();
 		if (obj instanceof JComponent) {
 			JComponent jc = (JComponent)obj;
-			WTableLocation loc = m_table.getLocation(jc);
+			WTableLocation loc = mTable.getLocation(jc);
 			String updates = send_change(loc);
 			m_changed = true;
 			if (updates != null && updates.length() > 0) {
@@ -955,22 +948,24 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 		change_insert_remove_update(de); 
 	}	// removeUpdate
 
+
+	//--------------------------------------------------------------------------
 	private void change_insert_remove_update(DocumentEvent de) {
 		Document doc = de.getDocument();
 		m_changed = true;
-		if (doc == m_army_year_doc) {
-			String year = m_tf_year.getText();
+		if (doc == mArmyYearDoc) {
+			String year = mTfYear.getText();
 			m_army_list_dbm_model.processInput(e_rqs.put.toString(),ArmyListConstants.c_army_year,year);
 		}	// if
 		else {
-			if (doc == m_army_description_doc) {
-				String name = m_tf_description.getText();
+			if (doc == mArmyDescriptionDoc) {
+				String name = mTfDescription.getText();
 				m_army_list_dbm_model.processInput(e_rqs.put.toString(),ArmyListConstants.c_army_name,name);
 			}	// if
 			else {
-				int row_count = m_table.getNumberOfRows(WTableSection.BODY);
+				int row_count = mTable.getNumberOfRows(WTableSection.BODY);
 				for (int rr=0; rr<row_count; rr++) {
-					JComponent jcomp = m_table.getComponent(WTableSection.BODY,rr,2);
+					JComponent jcomp = mTable.getComponent(WTableSection.BODY,rr,2);
 					if (jcomp instanceof JTextField) {
 						JTextField tf = (JTextField)jcomp;
 						Document doc2 = tf.getDocument();
@@ -980,7 +975,21 @@ public class ArmyListDBMEditorSwing extends JPanel implements ActionListener, Ch
 						}	// if
 					}	// if
 				}	// for - each row
-			}	// else - check the table desciptions
+			}	// else - check the table descriptions
 		}	// else
 	}	// change_insert_remove_update
+
+	//--------------------------------------------------------------------------
+	@Override
+	public void change(ChangeType type, ChangeObject obj, ChangeItem item, String value) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	//--------------------------------------------------------------------------
+	@Override
+	public void change(ChangeType type, ChangeObject obj, ChangeItem item, String[] values) {
+		// TODO Auto-generated method stub
+		
+	}
 }	// ArmyListDBMSwing

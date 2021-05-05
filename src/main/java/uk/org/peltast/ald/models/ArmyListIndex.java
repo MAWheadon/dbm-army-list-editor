@@ -1,8 +1,12 @@
 package uk.org.peltast.ald.models;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,8 +29,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 /** Maintains an index of all your army lists together with useful information
- * extracted from each. Does not do any IO, the caller has to do that and just
- * tell this index what is happening.
+ * extracted from each.
  * 
  * @author Mark Andrew Wheadon
  * @date 6th August 2013.
@@ -173,6 +176,24 @@ public class ArmyListIndex {
 			entry.mPoints = getAttribute(attrsNnm, AttrNames.POINTS);
 			mEntries.add(entry);
 		}
+	}
+
+	//--------------------------------------------------------------------------
+	public void loadFromFile() {
+		String dataDir = ArmyListModelUtils.getDataPath();
+		String path = dataDir + File.separator + "ald_index.xml";
+	    Path pth = Paths.get(path);
+	    boolean exists = Files.exists(pth);
+	    log.info("Index file exists? : {}", exists);
+	    if (exists) {
+	    	try {
+	    		String content = new String(Files.readAllBytes(pth));
+	    		loadFromXML(content);
+	    	}
+	    	catch (Exception e) {
+	    		log.warn("Error loading index ,continuing without!", e);
+	    	}
+	    }
 	}
 
 	//--------------------------------------------------------------------------

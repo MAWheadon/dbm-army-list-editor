@@ -1,8 +1,16 @@
+/*-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------*/
+
 package uk.org.peltast.ald.models;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -36,6 +44,8 @@ public class ArmyListDBMModel {
 	private static final int CMDS = 4;
 	public enum ColumnNames {QUANTITY, DESCRIPTION, DRILL, TYPE, GRADE, ADJUSTMENT, COST, TOTAL, CMD1_QTY, CMD2_QTY, CMD3_QTY, CMD4_QTY, UNUSED}
 	private enum AttributeNames{army, book, rules, version, id, name, year, rows, row, quantity, description, drill, type, grade, adjustment, cmdQty0, cmdQty1, cmdQty2, cmdQty3}
+
+	private ArmyListModelChange mchangeListener;
 
 	private class Row {
 		private int mQty;
@@ -78,6 +88,11 @@ public class ArmyListDBMModel {
 		for (int cc=0; cc<CMDS; cc++) {
 			mCommandTotals[cc] = new Totals();
 		}
+	}
+
+	//--------------------------------------------------------------------------
+	public void setChangeListener(ArmyListModelChange listener) {
+		mchangeListener = listener;
 	}
 
 	//--------------------------------------------------------------------------
@@ -440,9 +455,9 @@ public class ArmyListDBMModel {
 
 	//--------------------------------------------------------------------------
 	/** Loads an army list from the data provided.
-	 * @param data The date (YAML) for the army list
+	 * @param xml The XML string representing an army list.
 	 * @return A YAML string of the army list. */
-	void loadFromXML(String xml) {
+	private void loadFromXML(String xml) {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, ""); // Compliant
 		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, ""); // compliant
@@ -486,6 +501,37 @@ public class ArmyListDBMModel {
 			log.warn("Error loading army from XML.", e);
 		}
 		mRecalcNeeded = true;
+	}
+
+	//--------------------------------------------------------------------------
+	private static String makeFileName(String armyId) {
+		String dataDir = ArmyListModelUtils.getDataPath();
+		String path = dataDir + File.separator + "ald_army_" + armyId + ".xml";
+		return(path);
+	}
+
+	//--------------------------------------------------------------------------
+	public void loadFromFile(String armyId) throws IOException {
+		String path = makeFileName(armyId);
+	    Path pth = Paths.get(path);
+	    String content = new String(Files.readAllBytes(pth));
+	    loadFromXML(content);
+	}
+
+	//--------------------------------------------------------------------------
+	public void saveToFile() throws IOException, XMLStreamException {
+		String path = makeFileName(mArmyId);
+	    Path pth = Paths.get(path);
+	    String content = getAsXML();
+	    Files.write(pth, content.getBytes());
+	}
+
+	//--------------------------------------------------------------------------
+	public void deleteArmy() throws IOException {
+		String path = makeFileName(mArmyId);
+	    Path pth = Paths.get(path);
+	    Files.deleteIfExists(pth);
+	    log.info("Army list {} deleted", mArmyId);
 	}
 
 	//--------------------------------------------------------------------------
