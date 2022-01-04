@@ -1,20 +1,14 @@
 package uk.org.peltast.ald.views;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
-import java.awt.FlowLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -22,20 +16,19 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.ButtonModel;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
+import javax.swing.WindowConstants;
 import javax.swing.table.DefaultTableModel;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLStreamException;
@@ -44,8 +37,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
-import uk.org.peltast.ald.App;
+import uk.org.peltast.ald.models.ArmyIndexModelChange;
+import uk.org.peltast.ald.models.ArmyListConstants;
+import uk.org.peltast.ald.models.ArmyListDBMModel;
 import uk.org.peltast.ald.models.ArmyListIndex;
+import uk.org.peltast.ald.models.ArmyListModelUtils;
 import uk.org.peltast.ald.swing.WFrame;
 
 /** Shows a list of all your army lists and allows you to edit them.
@@ -55,21 +51,42 @@ import uk.org.peltast.ald.swing.WFrame;
  * @copyright Mark Andrew Wheadon, 2012,2021.
  * @licence MIT License.
  */
-public class ArmyListDBMSwing {
+public class ArmyListDBMSwing implements ArmyIndexModelChange {
 	private static final Logger log = LoggerFactory.getLogger(ArmyListDBMSwing.class);
-	private static final String[] TABLE_COLUMNS = {"Name","Book","Year", "Points"};
+	private static final String[] TABLE_COLUMNS = {"Group", "Name", "Book", "Year", "Points"};
 
+	private boolean mChanged = false;
+	private final String mDataDir;
 	private WFrame mFrame = new WFrame("Army List DBM");
 
 	private JTabbedPane mTabPane = new JTabbedPane();
 	private HiddenColumnTableModel mIndexTableModel = new HiddenColumnTableModel();
 	private JTable mIndexTable = new JTable(mIndexTableModel);
-	private final JTextField mStatusLine = new JTextField("Welcome ... Click New to create army, or double-click a listed one to edit");
+	private final JTextField mStatusLine = new JTextField("Welcome ... Use File->New army to create an army, or right click on an army for more options");
 	private final ArmyListIndex mArmyListIndex = new ArmyListIndex();
 
-	private JButton mNewBtn = new JButton(new ImageIcon(getClass().getResource("/icons/document-new.png")));
-	private JButton mDeleteBtn = new JButton(new ImageIcon(getClass().getResource("/icons/edit-delete.png")));
-	private JButton mCopyBtn = new JButton(new ImageIcon(getClass().getResource("/icons/edit-copy.png")));
+	private JMenuBar mMenuBar = new JMenuBar();
+	private JMenu mMenuFile = new JMenu("File");
+	private JMenuItem mMenuItemNewArmy = new JMenuItem("New army");
+	private JMenuItem mMenuItemExportArmy = new JMenuItem("Export army");
+	private JMenuItem mMenuItemImportArmy = new JMenuItem("Import army");
+	private JMenuItem mMenuItemEditArmy = new JMenuItem("Edit army");
+	private JMenuItem mMenuItemCopyArmy = new JMenuItem("Copy army");
+	private JMenuItem mMenuItemChangeGroupOfArmy = new JMenuItem("Change group of army");
+	private JMenuItem mMenuItemDeleteArmy = new JMenuItem("Delete army");
+	private JMenuItem mMenuItemExit = new JMenuItem("Exit");
+	private JPopupMenu mPopupMenu = new JPopupMenu();
+
+	//--------------------------------------------------------------------------
+	public ArmyListDBMSwing() {
+		mDataDir = ArmyListModelUtils.getDataPath();
+		File ff = new File(mDataDir);
+		if (!ff.exists()) {
+			log.info("About to create {}", mDataDir);
+			boolean ok = ff.mkdirs();
+			log.info("Create {} successful? {}", mDataDir, ok);
+		}
+	}
 
 	//--------------------------------------------------------------------------
 	public void start() {
@@ -80,6 +97,7 @@ public class ArmyListDBMSwing {
 
 	//--------------------------------------------------------------------------
 	private class SetupGui implements Runnable {
+		private int mSelectedRow = -1;
 		@Override
 		public void run() {
 			Container cont = mFrame.getContentPane();
@@ -90,84 +108,133 @@ public class ArmyListDBMSwing {
 			cont.add(pnl);
 
 			JPanel pnlMain = new JPanel(new BorderLayout());
-			JPanel pnlBtns = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
-			styleButtons(mNewBtn);
-			mNewBtn.getModel().addChangeListener(e -> {
-				ButtonModel model = (ButtonModel) e.getSource();
-				mNewBtn.setBorderPainted(model.isRollover());
-			});
-
-			// code to support creation of a new army list
-			mNewBtn.addActionListener(new ActionListener(){
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					// TODO:
+			mMenuItemNewArmy.addActionListener(e -> {
+				ArmyListDBMModel model = new ArmyListDBMModel();
+				ArmyListDBMEditorSwing ed;
+				try {
+					ed = new ArmyListDBMEditorSwing(model);
+				} catch (ParserConfigurationException | SAXException | IOException e1) {
+					String txt = "Error when trying to create army editor for a new army";
+					log.warn(txt , e1);
+					errorMessage(txt);
+					return;
 				}
+				ed.setIndexChanges(ArmyListDBMSwing.this);
+				Component tab = mTabPane.add(ed.getJPanel());
+				tab.setName(model.getArmyId());
+				mIndexTableModel.addRow(new Object[] {"", "", "", "", ""});
+				mIndexTableModel.addHiddenValue(model.getArmyId());
+				int tabCount = mTabPane.getTabCount();
+				mTabPane.setSelectedIndex(tabCount-1);
 			});
-			pnlBtns.add(mNewBtn);
 
-			styleButtons(mDeleteBtn);
-			mDeleteBtn.getModel().addChangeListener(e -> {
-				ButtonModel model = (ButtonModel) e.getSource();
-				mDeleteBtn.setBorderPainted(model.isRollover());
-			});
-
-			// code to support creation of a new army list
-			mDeleteBtn.addActionListener(new ActionListener(){
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					int row = mIndexTable.getSelectedRow();
-					log.info("Reqest to delete row {}", row);
-					if (row >= 0) {
-						row = mIndexTable.convertRowIndexToModel(row);
-						String armyId = (String)mIndexTableModel.getHiddenValue(row);
-						log.info("Army ID to delete is {}", armyId);
-						int tabIndex = getTab(armyId);
-						if (tabIndex >= 0) {
-							errorMessage("Cannot delete as open in another tab");
-							return;
-						}
-						log.info("About to delete army {}", armyId);
-						
-						String path = App.getArmyListPath(armyId);
-						try {
-							Files.delete(Paths.get(path));
-						}
-						catch (IOException e) {
-							log.warn("File {} deletion failed", path, e);
-						}
-						mArmyListIndex.delete(armyId);
-						try {
-							saveIndex();
-							mIndexTableModel.removeRow(row);
-						}
-						catch (IOException | XMLStreamException e) {
-							log.warn("Could not save index", e);
-							errorMessage("Could not save index");
-						}
+			mMenuItemDeleteArmy.addActionListener(e -> {
+				String armyId = getSelectedArmyId();
+				if (armyId != null) {
+					int tabIndex = getTab(armyId);
+					if (tabIndex >= 0) {
+						errorMessage("Cannot delete as open in another tab");
+						return;
+					}
+					log.info("About to delete army {}", armyId);
+					
+					String path = ArmyListModelUtils.getDataPath();
+					try {
+						Files.delete(Paths.get(path));
+					}
+					catch (IOException ioe) {
+						log.warn("File {} deletion failed", path, ioe);
+					}
+					mArmyListIndex.delete(armyId);
+					try {
+						saveIndex();
+						mIndexTableModel.removeRow(mSelectedRow);
+					}
+					catch (IOException | XMLStreamException ioe) {
+						log.warn("Could not save index", ioe);
+						errorMessage("Could not save index");
 					}
 				}
 			});
-			pnlBtns.add(mDeleteBtn);
 
-			styleButtons(mCopyBtn);
-			mCopyBtn.getModel().addChangeListener(e -> {
-				ButtonModel model = (ButtonModel) e.getSource();
-				mCopyBtn.setBorderPainted(model.isRollover());
-			});
-
-			// code to support creation of a new army list
-			mCopyBtn.addActionListener(new ActionListener(){
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					// TODO:
+			mMenuItemEditArmy.addActionListener(e -> {
+				String armyId = getSelectedArmyId();
+				if (armyId == null) {
+					errorMessage("Army not selected");
+				}
+				else {
+					ArmyListDBMModel armyList = new ArmyListDBMModel();
+					try {
+						armyList.loadFromFile(mDataDir, armyId);
+					} catch (IOException e1) {
+						errorMessage("Could not load army");
+					}
+					int tabIndex = getTab(armyId);
+					if (tabIndex == -1) {
+						ArmyListDBMEditorSwing ed;
+						try {
+							ed = new ArmyListDBMEditorSwing(armyList);
+						} catch (ParserConfigurationException | SAXException | IOException e1) {
+							String txt = "Error when trying to create army editor";
+							log.warn(txt , e1);
+							errorMessage(txt);
+							return;
+						}
+						mTabPane.add(ed.getJPanel());
+						int tabCount = mTabPane.getTabCount();
+						mTabPane.setSelectedIndex(tabCount-1);
+					}
+					else {
+						mTabPane.setSelectedIndex(tabIndex);	// else - just switch to that tab
+					}
 				}
 			});
-			pnlBtns.add(mCopyBtn);
-			
 
-			pnlMain.add(pnlBtns,BorderLayout.NORTH);
+			mMenuItemCopyArmy.addActionListener(e -> {
+			});
+
+			mMenuItemChangeGroupOfArmy.addActionListener(e -> {
+				String[] groups = mArmyListIndex.getGroups();
+				JComboBox<String> combo = new JComboBox<>(groups);
+				combo.setEditable(true);
+				JOptionPane.showMessageDialog(mFrame, combo, "Change army group", JOptionPane.QUESTION_MESSAGE);
+				String groupNameNew = combo.getSelectedItem().toString();
+				String armyId = getSelectedArmyId();
+				if (armyId == null) {
+					errorMessage("Army not selected");
+				}
+				else {
+					mArmyListIndex.setGroupName(armyId, groupNameNew);
+					try {
+						saveIndex();
+						mIndexTableModel.setValueAt(groupNameNew, mSelectedRow, 0);
+					} catch (IOException | XMLStreamException e1) {
+						errorMessage("Could not save index");
+					}
+				}
+			});
+
+			mMenuItemExit.addActionListener(e -> {
+				// check if there are unsaved changes to any armies
+				// else
+				int reply = JOptionPane.showConfirmDialog(mFrame, "Are you sure you want to exit?", "Exit?",  JOptionPane.YES_NO_OPTION);
+				if (reply == JOptionPane.YES_OPTION)
+				{
+					mFrame.dispose();
+				}
+			});
+			mFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+
+			pnl.add(mMenuBar,BorderLayout.NORTH);
+			mMenuBar.add(mMenuFile);
+			mMenuFile.add(mMenuItemNewArmy);
+			mMenuFile.add(mMenuItemExit);
+			mPopupMenu.add(mMenuItemChangeGroupOfArmy);
+			mPopupMenu.add(mMenuItemCopyArmy);
+			mPopupMenu.add(mMenuItemDeleteArmy);
+			
+			mIndexTable.setComponentPopupMenu(mPopupMenu);
 
 			// set up index tab
 			mIndexTableModel.setColumnIdentifiers(TABLE_COLUMNS);
@@ -202,7 +269,7 @@ public class ArmyListDBMSwing {
 
 			// The WindowListener we are adding need to happen first because the WFrame version does a system.Exit.
 			// remove any current, add this one here, add back previous one (just the WFrame one).
-			WindowListener wls[] = mFrame.getWindowListeners();
+			WindowListener[] wls = mFrame.getWindowListeners();
 			for (WindowListener wl : wls) {
 				mFrame.removeWindowListener(wl);
 			}	// for - remove them all
@@ -250,73 +317,47 @@ public class ArmyListDBMSwing {
 		}	// run
 
 		//--------------------------------------------------------------------------
-		private void saveIndex() throws IOException, XMLStreamException {
-			String dataDir = App.getDataDirectory();
-			File ff = new File(dataDir);
-			if (!ff.exists()) {
-				log.info("About to create {}", dataDir);
-				boolean ok = ff.mkdirs();
-				log.info("Create {} successful? {}", dataDir, ok);
-			}
-			String path = dataDir + File.separator + "index.xml";
-			String xml = mArmyListIndex.getAsXML();
-			try (FileWriter fr = new FileWriter(path); BufferedWriter br = new BufferedWriter(fr)) {
-				br.write(xml);
-			}
-			log.info("Saving index XML complete");
-		}
-
-		//--------------------------------------------------------------------------
-		private void styleButtons(JButton btn) {
-			btn.setBorderPainted(false);
-			btn.setContentAreaFilled(false);
-			LineBorder bdr = new LineBorder(Color.DARK_GRAY,1,true);
-			Border margin = new EmptyBorder(4,4,4,4);
-			btn.setBorder(new CompoundBorder(bdr, margin));
-		}
-
-		//--------------------------------------------------------------------------
-		private void errorMessage(String msg) {
-			JOptionPane.showMessageDialog(mFrame.getContentPane(),msg);
-		}
-
-		//--------------------------------------------------------------------------
-		private int getTab(String id) {
-			int tabCount = mTabPane.getTabCount();
-			for (int ii=0; ii<tabCount; ii++) {
-				Component comp = mTabPane.getComponentAt(ii);
-				String panelName = comp.getName();
-				if (panelName.equals(id)) {
-					return(ii);
-				}
-			}
-			return(-1);
-		}
-
-		//--------------------------------------------------------------------------
 		private void loadIndex() {
-			mArmyListIndex.loadFromFile();
+			mArmyListIndex.loadFromFile(mDataDir);
 			String[] ids = mArmyListIndex.getEntryIDs();
 			for (int ii=0; ii< ids.length; ii++) {
 				String id = ids[ii];
 				String book = mArmyListIndex.getBook(id);
+				String group = mArmyListIndex.getGroupName(id);
+				if (group == null) {
+					group = "";
+				}
 				String name = mArmyListIndex.getName(id);
 				String points = mArmyListIndex.getPoints(id);
 				String year = mArmyListIndex.getYear(id);
-				mIndexTableModel.addRow(new Object[] {name, book, year, points});
+				mIndexTableModel.addRow(new Object[] {group, name, book, year, points});
 				mIndexTableModel.addHiddenValue(id);
 			}
+		}
+
+		//--------------------------------------------------------------------------
+		/** Get the ID of the army selected, probably used during right mouse 
+		 * button processing.
+		 * @return the army Id or null if none selected. */
+		private String getSelectedArmyId() {
+			int row = mIndexTable.getSelectedRow();
+			log.info("Selected row on screen is {}", row);
+			if (row >= 0) {
+				mSelectedRow = mIndexTable.convertRowIndexToModel(row);
+				log.info("Selected row in table is {}", mSelectedRow);
+				String armyId = (String)mIndexTableModel.getHiddenValue(mSelectedRow);
+				log.info("Selected Army ID is {}", armyId);
+				return(armyId);
+			}
+			return(null);
 		}
 	}
 
 	//--------------------------------------------------------------------------
-	private void writeStatus(String msg) {
-		mStatusLine.setText(msg);
-	}
-
-	//--------------------------------------------------------------------------
-	private void popupMessage(String msg) {
-		JOptionPane.showConfirmDialog(mFrame, msg);
+	private void saveIndex() throws IOException, XMLStreamException {
+		mArmyListIndex.saveToFile(mDataDir);
+		writeStatus("Index saved");
+		mChanged = false;
 	}
 
 	//--------------------------------------------------------------------------
@@ -345,5 +386,67 @@ public class ArmyListDBMSwing {
 	    public boolean isCellEditable(int row, int column) {
 	       return false;	// all cells false
 	    }
+	}
+
+	//--------------------------------------------------------------------------
+	private void writeStatus(String msg) {
+		mStatusLine.setText(msg);
+	}
+
+	//--------------------------------------------------------------------------
+	private void errorMessage(String msg) {
+		JOptionPane.showMessageDialog(mFrame.getContentPane(),msg);
+		writeStatus(msg);
+	}
+
+	//--------------------------------------------------------------------------
+	private int getTab(String id) {
+		int tabCount = mTabPane.getTabCount();
+		for (int ii=0; ii<tabCount; ii++) {
+			Component comp = mTabPane.getComponentAt(ii);
+			String panelName = comp.getName();
+			if (panelName.equals(id)) {
+				return(ii);
+			}
+		}
+		return(-1);
+	}
+
+	//--------------------------------------------------------------------------
+	private int getIndexRow(String armyId) {
+		int rowCount = mIndexTableModel.getRowCount();
+		for (int ii = 0; ii < rowCount; ii++) {
+			String id = (String)(mIndexTableModel.getHiddenValue(ii));
+			if (id.equals(armyId)) {
+				return(ii);
+			}
+		}
+		return(-1);
+	}
+
+	//--------------------------------------------------------------------------
+	@Override
+	public void change(String armyId, ArmyListConstants field, String value) {
+		int indexRow = getIndexRow(armyId);
+		switch (field) {
+			case DESCRIPTION :
+				mIndexTableModel.setValueAt(value, indexRow, 1);
+				mChanged = true;
+				break;
+			case BOOK :
+				mIndexTableModel.setValueAt(value, indexRow, 2);
+				mChanged = true;
+				break;
+			case YEAR :
+				mIndexTableModel.setValueAt(value, indexRow, 3);
+				mChanged = true;
+				break;
+			case POINTS :
+				mIndexTableModel.setValueAt(value, indexRow, 4);
+				mChanged = true;
+				break;
+			default	:
+				log.warn("Unknown index field {}", field);
+		}
 	}
 }

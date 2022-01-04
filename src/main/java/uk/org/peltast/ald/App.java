@@ -1,7 +1,5 @@
 package uk.org.peltast.ald;
 
-import java.io.File;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +10,7 @@ import uk.org.peltast.ald.views.ArmyListDBMSwing;
  *
  */
 public class App {
-	private static final Logger log = LoggerFactory.getLogger(ArmyListDBMSwing.class);
+	private static final Logger log = LoggerFactory.getLogger(App.class);
 
     //--------------------------------------------------------------------------
 	public static void main( String[] args )

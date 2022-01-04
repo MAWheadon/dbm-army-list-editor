@@ -4,7 +4,6 @@
 package uk.org.peltast.ald.models;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -15,6 +14,7 @@ import java.text.DecimalFormat;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -31,6 +31,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 /** A DBM army list.
  *
@@ -44,8 +45,6 @@ public class ArmyListDBMModel {
 	private static final int CMDS = 4;
 	public enum ColumnNames {QUANTITY, DESCRIPTION, DRILL, TYPE, GRADE, ADJUSTMENT, COST, TOTAL, CMD1_QTY, CMD2_QTY, CMD3_QTY, CMD4_QTY, UNUSED}
 	private enum AttributeNames{army, book, rules, version, id, name, year, rows, row, quantity, description, drill, type, grade, adjustment, cmdQty0, cmdQty1, cmdQty2, cmdQty3}
-
-	private ArmyListModelChange mchangeListener;
 
 	private class Row {
 		private int mQty;
@@ -91,12 +90,26 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	public void setChangeListener(ArmyListModelChange listener) {
-		mchangeListener = listener;
+	public ArmyListCosts getArmyCosts() throws ParserConfigurationException, SAXException, IOException {
+		if (mCosts == null) {
+			log.info("Costs are null so choose the most recent");
+			List<ArmyListVersion> vers = ArmyListCosts.listAvailableVersions();
+			int sz = vers.size();
+			if (sz > 0) {
+				ArmyListVersion ver = vers.get(sz-1);
+				mCosts = new ArmyListCosts(ver);
+			}
+		}
+		return(mCosts);
 	}
 
 	//--------------------------------------------------------------------------
 	public void setArmyCosts(ArmyListCosts costs) {
+		mCosts = costs;
+	}
+
+	//--------------------------------------------------------------------------
+	public void setArmyCosts(ArmyListCosts costs, ArmyListModelChange changes) {
 		mCosts = costs;
 	}
 
@@ -167,6 +180,14 @@ public class ArmyListDBMModel {
 		int sz = mRows.size();
 		log.info("Added row {}", sz-1);
 		return(sz-1);
+	}
+
+	//--------------------------------------------------------------------------
+	/** Adds a blank row.
+	 * @return The index of the row just added. */
+	public int addRow(ArmyListModelChange changes) {
+		int row = addRow();
+		return(row);
 	}
 
 	//--------------------------------------------------------------------------
@@ -248,6 +269,14 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	/** Sets a quantity for the row.
+	 * @param rowIndex 0 based row index.
+	 * @param quantity The number of elements. */
+	public void setRowQuantity(int rowIndex, int quantity, ArmyListModelChange changes) {
+		setRowQuantity(rowIndex, quantity);
+	}
+
+	//--------------------------------------------------------------------------
 	/** Gets a quantity for the row.
 	 * @param rowIndex The nought based row number.
 	 * @return The number of elements. */
@@ -265,6 +294,15 @@ public class ArmyListDBMModel {
 		Row row = mRows.get(rowIndex);
 		row.mCmdQty[command-1] = quantity;
 		mRecalcNeeded = true;
+	}
+
+	//--------------------------------------------------------------------------
+	/** Sets a quantity of troops for a command.
+	 * @param rowIndex The nought based row number.
+	 * @param command The 1 based command number (1-4).
+	 * @param quantity The number of elements. */
+	public void setRowCommandQuantity(int rowIndex, int command, int quantity, ArmyListModelChange changes) {
+		setRowCommandQuantity(rowIndex, command, quantity);
 	}
 
 	//--------------------------------------------------------------------------
@@ -306,6 +344,14 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	/** Sets the troop's drill.
+	 * @param rowIndex The nought based row number.
+	 * @param drill The drill e.g. Irr, Reg, Fort. */
+	public void setRowDrill(int rowIndex, String drill, ArmyListModelChange changes) {
+		setRowDrill( rowIndex,  drill);
+	}
+
+	//--------------------------------------------------------------------------
 	/** Gets the troop's drill.
 	 * @param rowIndex The nought based row number.
 	 * @return The drill e.g. Irr, Reg, Fort. */
@@ -322,6 +368,14 @@ public class ArmyListDBMModel {
 		Row row = mRows.get(rowIndex);
 		row.mTypeName = type;
 		mRecalcNeeded = true;
+	}
+
+	//--------------------------------------------------------------------------
+	/** Sets the troop's type.
+	 * @param rowIndex The nought based row number.
+	 * @param type The type e.g. Kn, Cv, Pk, Bl */
+	public void setRowType(int rowIndex, String type, ArmyListModelChange changes) {
+		setRowType(rowIndex, type);
 	}
 
 	//--------------------------------------------------------------------------
@@ -344,6 +398,14 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	/** Sets the troops's grade.
+	 * @param rowIndex The nought based row number.
+	 * @param grade The grade e.g. S, O, I, F, X. */
+	public void setRowGrade(int rowIndex, String grade, ArmyListModelChange changes) {
+		setRowGrade(rowIndex, grade);
+	}
+
+	//--------------------------------------------------------------------------
 	/** Gets the troops's grade.
 	 * @param rowIndex The nought based row number.
 	 * @return The grade e.g. S, O, I, F, X. */
@@ -360,6 +422,14 @@ public class ArmyListDBMModel {
 		Row row = mRows.get(rowIndex);
 		row.mAdjustment = adjustment;
 		mRecalcNeeded = true;
+	}
+
+	//--------------------------------------------------------------------------
+	/** Sets the troop's adjustment.
+	 * @param rowIndex The nought based row number.
+	 * @param adjustment The adjustment e.g. "Ally general, Chariot". */
+	public void setRowAdjustment(int rowIndex, String adjustment, ArmyListModelChange changes) {
+		setRowAdjustment(rowIndex, adjustment);
 	}
 
 	//--------------------------------------------------------------------------
@@ -457,7 +527,7 @@ public class ArmyListDBMModel {
 	/** Loads an army list from the data provided.
 	 * @param xml The XML string representing an army list.
 	 * @return A YAML string of the army list. */
-	private void loadFromXML(String xml) {
+	void loadFromXML(String xml) {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, ""); // Compliant
 		dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, ""); // compliant
@@ -504,31 +574,30 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	private static String makeFileName(String armyId) {
-		String dataDir = ArmyListModelUtils.getDataPath();
+	private static String makeFileName(String dataDir, String armyId) {
 		String path = dataDir + File.separator + "ald_army_" + armyId + ".xml";
 		return(path);
 	}
 
 	//--------------------------------------------------------------------------
-	public void loadFromFile(String armyId) throws IOException {
-		String path = makeFileName(armyId);
+	public void loadFromFile(String dataDir, String armyId) throws IOException {
+		String path = makeFileName(dataDir, armyId);
 	    Path pth = Paths.get(path);
 	    String content = new String(Files.readAllBytes(pth));
 	    loadFromXML(content);
 	}
 
 	//--------------------------------------------------------------------------
-	public void saveToFile() throws IOException, XMLStreamException {
-		String path = makeFileName(mArmyId);
+	public void saveToFile(String dataDir) throws IOException, XMLStreamException {
+		String path = makeFileName(dataDir, mArmyId);
 	    Path pth = Paths.get(path);
 	    String content = getAsXML();
 	    Files.write(pth, content.getBytes());
 	}
 
 	//--------------------------------------------------------------------------
-	public void deleteArmy() throws IOException {
-		String path = makeFileName(mArmyId);
+	public void deleteArmy(String dataDir) throws IOException {
+		String path = makeFileName(dataDir, mArmyId);
 	    Path pth = Paths.get(path);
 	    Files.deleteIfExists(pth);
 	    log.info("Army list {} deleted", mArmyId);
@@ -718,5 +787,16 @@ public class ArmyListDBMModel {
 		mArmyId = null;
 		mRows.clear();
 		resetAllTotals();
+	}
+
+	//--------------------------------------------------------------------------
+	/** Assumes the caller has none of the army or has discarded it and sends 
+	 * all the changes for the whole army from scratch.
+	 * @param changes To call the necessary change methods. */
+	public void getWholeArmy(ArmyListModelChange changes) {
+		changes.setField(ArmyListConstants.ARMY_ID, mArmyId);
+		changes.setField(ArmyListConstants.DESCRIPTION, mArmyName);
+		changes.setField(ArmyListConstants.BOOK, mArmyBook);
+		changes.setField(ArmyListConstants.YEAR, mArmyYear);
 	}
 }

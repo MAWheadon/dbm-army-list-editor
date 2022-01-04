@@ -19,7 +19,7 @@ class ArmyListCostsTest {
 	@BeforeAll
 	static void setUpBeforeClass() throws Exception {
 		try {
-			costs = new ArmyListCosts("3",  "3");
+			costs = new ArmyListCosts(new ArmyListVersion(3, 3));
 		}
 		catch (Exception e) {
 			log.warn("Error", e);
@@ -163,7 +163,7 @@ class ArmyListCostsTest {
 	//--------------------------------------------------------------------------
 	@Test
 	final void testlistAvailableVersions() throws URISyntaxException {
-		List<String> vers = costs.listAvailableVersions();
+		List<ArmyListVersion> vers = costs.listAvailableVersions();
 		assertTrue(vers.size() > 0);
 		log.info("The available costs versions are {}", vers);
 	}

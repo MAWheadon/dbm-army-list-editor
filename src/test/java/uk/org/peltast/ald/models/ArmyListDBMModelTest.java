@@ -19,7 +19,7 @@ class ArmyListDBMModelTest {
 	static void setUpBeforeClass() throws Exception {
 		log.info("Setting up test army list");
 		mdl = new ArmyListDBMModel();
-		ArmyListCosts costs = new ArmyListCosts("3", "3");
+		ArmyListCosts costs = new ArmyListCosts(new ArmyListVersion(3, 3));
 		mdl.setArmyCosts(costs);
 
 		mdl.setArmyBook("Book 2");

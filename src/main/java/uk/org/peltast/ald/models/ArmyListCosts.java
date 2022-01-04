@@ -1,13 +1,8 @@
 package uk.org.peltast.ald.models;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,10 +36,11 @@ import org.xml.sax.helpers.DefaultHandler;
  * @copyright Mark Andrew Wheadon, 2012,2020.
  * @licence MIT License.
  */
-class ArmyListCosts {
+public class ArmyListCosts {
 	private static final Logger log = LoggerFactory.getLogger(ArmyListCosts.class);
-	private enum NodeNames {costs, drill, adjustments, adjustment, types, type, troop};
-	private enum AttributeNames {rules, version, name, text, cost, grade, ap, eq, adjs};
+	private enum NodeNames {costs, books, book, drill, adjustments, adjustment, types, type, troop};
+	private enum AttributeNames {rules, version, name, text, cost, grade, ap, eq, adjs, description};
+	private List<String> mBooks = new ArrayList<>();
 	private Costs mCosts;
 
 	//--------------------------------------------------------------------------
@@ -231,6 +228,10 @@ class ArmyListCosts {
 					String version = getAttributeValueAsString(AttributeNames.version, attributes);
 					mCosts = new Costs(rules,version);
 					break;
+				case book :
+					String book = getAttributeValueAsString(AttributeNames.description, attributes);
+					mBooks.add(book);
+					break;
 				case drill :
 					String name = getAttributeValueAsString(AttributeNames.name, attributes);
 					mDrill = new Drill(name);
@@ -278,9 +279,9 @@ class ArmyListCosts {
 	}
 
 	//--------------------------------------------------------------------------
-	ArmyListCosts(String majorVersion, String minorVersion) throws ParserConfigurationException, SAXException, IOException {
-		String ver = MessageFormat.format("costs_dbm_{0}_{1}.xml", majorVersion, minorVersion);
-		loadCostFile(ver);
+	ArmyListCosts(ArmyListVersion ver) throws ParserConfigurationException, SAXException, IOException {
+		String version = MessageFormat.format("costs_dbm_{0}_{1}.xml", ver.getMajorVerison(), ver.getMinorVerison());
+		loadCostFile(version);
 	}
 
 	//--------------------------------------------------------------------------
@@ -296,18 +297,17 @@ class ArmyListCosts {
 	}
 
 	//--------------------------------------------------------------------------
-	List<String> listAvailableVersions() throws URISyntaxException {
+	public String[] getBooks() {
+		return(mBooks.toArray(new String[0]));
+	}
+
+	//--------------------------------------------------------------------------
+	static List<ArmyListVersion> listAvailableVersions() {
 		String regex1 = "^costs_dbm_\\d_\\d.xml$";
 		String regex2 = "\\d";
 		Pattern pattern1 = Pattern.compile(regex1);
 		Pattern pattern2 = Pattern.compile(regex2);
-		List<String> vers = new ArrayList<>();
-/*		
-		URL url = ArmyListCosts.class.getClassLoader().getResource(".");
-		log.info("Resource directory is {}", url);
-		Path path = Paths.get(url.toURI());
-		File dir = path.toFile();
-*/
+		TreeSet<ArmyListVersion> vers = new TreeSet<>();
 		File dir = new File("src/main/resources");
 		String[] names = dir.list();
 		log.info("Version files are {}", Arrays.asList(names));
@@ -322,18 +322,18 @@ class ArmyListCosts {
 					found = matcher2.find();
 					if (found) {
 						String minor = matcher2.group();
-						String majMin = major + "." + minor;
-						vers.add(majMin);
+						ArmyListVersion ver = new ArmyListVersion(Integer.parseInt(major), Integer.parseInt(minor));
+						vers.add(ver);
 					}
 				}
 			}
 		}
 		log.info("Available version are {}", vers);
-		return(vers);
+		return(new ArrayList<>(vers));
 	}
 
 	//--------------------------------------------------------------------------
-	List<String> getDrillList() {
+	public List<String> getDrillList() {
 		List<String> list = mCosts.getDrillList();
 		return(list);
 	}
@@ -448,7 +448,7 @@ class ArmyListCosts {
 	}
 
 	//--------------------------------------------------------------------------
-	String getVersion() {
+	public String getVersion() {
 		return(mCosts.mVersion);
 	}
 }

@@ -1,6 +1,8 @@
 package uk.org.peltast.ald.models;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -10,6 +12,8 @@ import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -39,19 +43,20 @@ import org.xml.sax.SAXException;
 public class ArmyListIndex {
 	private static final Logger log = LoggerFactory.getLogger(ArmyListIndex.class);
 	private enum NodeNames{ENTRY, ENTRIES}
-	private enum AttrNames{ID, NAME, BOOK, YEAR, POINTS}
+	private enum AttrNames{ID, GROUP_NAME, NAME, BOOK, YEAR, POINTS}
 
 	private class Entry {
 		String mId;
+		String mGroupName;	// a way of grouping army list together, e.g. for variations of the same army. Can be blank.
 		String mName;
 		String mBook;
 		String mYear;
 		String mPoints;
 		public String toString() {
-			return(MessageFormat.format("{0}: {1}, {2}, {3}. {4}", mId, mName, mBook, mYear, mPoints ));
+			return(MessageFormat.format("{0}: {1}, {2}, {3}. {4}, {5}", mId, mGroupName, mName, mBook, mYear, mPoints ));
 		}
 	}
-	private final List<Entry> mEntries = new ArrayList<Entry>();
+	private final List<Entry> mEntries = new ArrayList<>();
 
 	//--------------------------------------------------------------------------
 	public int getEntryCount() {
@@ -68,6 +73,18 @@ public class ArmyListIndex {
 			ii++;
 		}
 		return (ids);
+	}
+
+	//--------------------------------------------------------------------------
+	public String getGroupName(String id) {
+		Entry entry = findEntry2(id);
+		return(entry.mGroupName);
+	}
+
+	//--------------------------------------------------------------------------
+	public void setGroupName(String id, String groupNameNew) {
+		Entry entry = findEntry2(id);
+		entry.mGroupName = groupNameNew;
 	}
 
 	//--------------------------------------------------------------------------
@@ -118,6 +135,33 @@ public class ArmyListIndex {
 	}
 
 	//--------------------------------------------------------------------------
+	//* Lists the groups in alphabetical (natural) order. */	
+	public String[] getGroups() {
+		Set<String> groups = new TreeSet<>();
+		for (Entry entry : mEntries) {
+			String groupName = entry.mGroupName;
+			if (groupName != null && !groupName.isEmpty()) {
+				groups.add(entry.mGroupName);
+			}
+		}
+		String[] arr = groups.toArray(new String[0]);
+		return(arr);
+	}
+
+	//--------------------------------------------------------------------------
+	//* Lists the armies by id in a given group. */	
+	String[] getArmiesInGroup(String groupName) {
+		Set<String> armies = new TreeSet<>();
+		for (Entry entry : mEntries) {
+			if (groupName.equals(entry.mGroupName)) {
+				armies.add(entry.mName);
+			}
+		}
+		String[] arr = armies.toArray(new String[0]);
+		return(arr);
+	}
+
+	//--------------------------------------------------------------------------
 	/** Gets the index as XML (presumably for storing somewhere).
 	 * @return XML representation of the index. 
 	 * @throws IOException 
@@ -132,6 +176,7 @@ public class ArmyListIndex {
 			for (Entry entry : mEntries) {
 				writer.writeStartElement(NodeNames.ENTRY.toString().toLowerCase());
 			    writeXMLAttribute(writer, AttrNames.ID, entry.mId);
+			    writeXMLAttribute(writer, AttrNames.GROUP_NAME, entry.mGroupName);
 			    writeXMLAttribute(writer, AttrNames.NAME, entry.mName);
 			    writeXMLAttribute(writer, AttrNames.BOOK, entry.mBook);
 			    writeXMLAttribute(writer, AttrNames.YEAR, entry.mYear);
@@ -170,6 +215,7 @@ public class ArmyListIndex {
 			NamedNodeMap attrsNnm = entryNode.getAttributes();
 			Entry entry = new Entry();
 			entry.mId = getAttribute(attrsNnm, AttrNames.ID);
+			entry.mGroupName = getAttribute(attrsNnm, AttrNames.GROUP_NAME);
 			entry.mName = getAttribute(attrsNnm, AttrNames.NAME);
 			entry.mBook = getAttribute(attrsNnm, AttrNames.BOOK);
 			entry.mYear = getAttribute(attrsNnm, AttrNames.YEAR);
@@ -179,9 +225,8 @@ public class ArmyListIndex {
 	}
 
 	//--------------------------------------------------------------------------
-	public void loadFromFile() {
-		String dataDir = ArmyListModelUtils.getDataPath();
-		String path = dataDir + File.separator + "ald_index.xml";
+	public void loadFromFile(String dataDir) {
+		String path = dataDir + File.separator + "index.xml";
 	    Path pth = Paths.get(path);
 	    boolean exists = Files.exists(pth);
 	    log.info("Index file exists? : {}", exists);
@@ -197,20 +242,34 @@ public class ArmyListIndex {
 	}
 
 	//--------------------------------------------------------------------------
+	public void saveToFile(String dataDir) throws IOException, XMLStreamException {
+		String path = dataDir + File.separator + "index.xml";
+		String xml = getAsXML();
+		try (FileWriter fr = new FileWriter(path); BufferedWriter br = new BufferedWriter(fr)) {
+			br.write(xml);
+		}
+		log.info("Saving index XML complete");
+	}
+
+	//--------------------------------------------------------------------------
 	private static String getAttribute(NamedNodeMap nnm, AttrNames name) {
 		Node nn = nnm.getNamedItem(name.toString().toLowerCase());
+		if (nn == null) {
+			return(null);
+		}
 		String value = nn.getNodeValue();
 		return (value);
 	}
 
 	//--------------------------------------------------------------------------
-	public void addEntry(String id, String name, String book, String year, String points) {
+	public void addEntry(String id, String groupName, String name, String book, String year, String points) {
 		Entry entry = findEntry(id);
 		if (entry != null) {
 			throw new IllegalArgumentException("ID " + id + " is already in the index. Duplicates not allowed");
 		}
 		entry = new Entry();
 		entry.mId = id;
+		entry.mGroupName = groupName;
 		entry.mName = name;
 		entry.mBook = book;
 		entry.mYear = year;
@@ -219,11 +278,12 @@ public class ArmyListIndex {
 	}
 
 	//--------------------------------------------------------------------------
-	public void updateEntry(String id, String name, String book, String year, String points) {
+	public void updateEntry(String id, String groupName, String name, String book, String year, String points) {
 		Entry entry = findEntry(id);
 		if (entry == null) {
 			throw new IllegalArgumentException("ID " + id + " not in index");
 		}
+		entry.mGroupName = groupName;
 		entry.mName = name;
 		entry.mBook = book;
 		entry.mYear = year;

@@ -17,6 +17,11 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JSeparator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import uk.org.peltast.ald.views.ArmyListDBMSwing;
+
 /** A helper Swing class that creates a JFrame and remembers where it is on 
  * the desktop.
  * 
@@ -26,23 +31,25 @@ import javax.swing.JSeparator;
  * @licence MIT License.
  */
 public class WFrame extends JFrame {
+	private static final Logger log = LoggerFactory.getLogger(WFrame.class);
 	private static final long serialVersionUID = 1L;
-	private File m_settings_file;
-	private boolean m_settings_file_exists;
-	private String m_dir;
-	private File m_dir_file;
-	private JMenuBar m_menu_bar;
+	private File mSettingsFile;
+	private boolean mSettingsFileExists;
+	private String mDir;
+	private File mDirFile;
+	private JMenuBar mMenuBar;
 
 	//----------------------------------------------------------------------
 	public WFrame(String title) {
 		super(title);
-		m_dir = title.replace(' ', '_');		
+		mDir = title.replace(' ', '_');		
 		String path = System.getProperty("user.home");
-		path = path + File.separator + m_dir + File.separator + m_dir + ".properties";
-		m_settings_file = new File(path);
-		m_dir_file = m_settings_file.getParentFile();
-		m_dir_file.mkdirs();
+		path = path + File.separator + mDir + File.separator + mDir + ".properties";
+		mSettingsFile = new File(path);
+		mDirFile = mSettingsFile.getParentFile();
+		mDirFile.mkdirs();
 		addWindowListener(new WindowAdapter() {
+			@Override
 			public void windowClosing(WindowEvent we) {
 				Rectangle rect = getBounds();
 				Properties props = new Properties();
@@ -50,29 +57,27 @@ public class WFrame extends JFrame {
 				props.setProperty(WindowState.WINDOW_STATE_TOP.name(),String.valueOf(rect.y));
 				props.setProperty(WindowState.WINDOW_STATE_WIDTH.name(),String.valueOf(rect.width));
 				props.setProperty(WindowState.WINDOW_STATE_HEIGHT.name(),String.valueOf(rect.height));
-				int window_state = getExtendedState();
-				if ((window_state & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
+				int windowState = getExtendedState();
+				if ((windowState & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
 					props.setProperty(WindowState.WINDOW_STATE_MAXIMISED.name(),"true");
-				}	// if
+				}
 				else {
 					props.setProperty(WindowState.WINDOW_STATE_MAXIMISED.name(),"false");
-				}	// else
-				try {
-					FileOutputStream fos = new FileOutputStream(m_settings_file);
+				}
+				try (FileOutputStream fos = new FileOutputStream(mSettingsFile)) {
 					props.store(fos,"");
 					System.exit(0);
-				}	// try
+				}
 				catch (Exception e) {
-					System.out.println("Error:" +e);
-				}	// catch
-			}	// windowClosing
+					log.warn("Error", e);
+				}
+			}
 		});
 
 		Properties props = new Properties();
-		try {
-			FileInputStream fis = new FileInputStream(m_settings_file);
-			m_settings_file_exists = m_settings_file.exists();
-			if (m_settings_file_exists) {
+		try (FileInputStream fis = new FileInputStream(mSettingsFile)) {
+			mSettingsFileExists = mSettingsFile.exists();
+			if (mSettingsFileExists) {
 				props.load(fis);
 				int left = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_LEFT.name()));
 				int top = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_TOP.name()));
@@ -80,72 +85,67 @@ public class WFrame extends JFrame {
 				int height = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_HEIGHT.name()));
 				boolean max = Boolean.parseBoolean(props.getProperty(WindowState.WINDOW_STATE_MAXIMISED.name()));
 				setBounds(left,top,width,height);
-				int window_state = getExtendedState();
+				int windowState = getExtendedState();
 				if (max) {
-					window_state |= Frame.MAXIMIZED_BOTH;
-				}	// if
-				setExtendedState(window_state);
-			}	// if
-		}	// try
+					windowState |= Frame.MAXIMIZED_BOTH;
+				}
+				setExtendedState(windowState);
+			}
+		}
 		catch (Exception e) {
-			System.out.println("Error:" +e);
-		}	// catch
-	}	// WFrame
+			log.warn("Error", e);
+		}
+	}
 
 	//----------------------------------------------------------------------
 	@Override
 	public void setVisible(boolean b) {
-		if (m_settings_file_exists == false) {
+		if (!mSettingsFileExists) {
 			pack();
-		}	// if
+		}
 		super.setVisible(b);
-	}	// setVisible
+	}
 
 	//--------------------------------------------------------------------------
-	public File getDirectory() {
-		return(m_dir_file);
-	}	// getDirectory
-
-	//--------------------------------------------------------------------------
-	public void addMenu(String name, ActionListener action_listener, String ... items) {
-		if (m_menu_bar == null) {
-			m_menu_bar = new JMenuBar();
-			setJMenuBar(m_menu_bar);
-		}	// if
+	public void addMenu(String name, ActionListener actionListener, String ... items) {
+		if (mMenuBar == null) {
+			mMenuBar = new JMenuBar();
+			setJMenuBar(mMenuBar);
+		}
 		JMenu menu = new JMenu(name);
 		for (String item : items) {
 			if (item.equals("-")) {
 				menu.add(new JSeparator());
-			}	// if
+			}
 			else {
 				JMenuItem mi = new JMenuItem(item);
 				menu.add(mi);
-				mi.addActionListener(action_listener);
-			}	// else
-		}	// for
-		m_menu_bar.add(menu);
-	}	// addMenu
+				mi.addActionListener(actionListener);
+			}
+		}
+		mMenuBar.add(menu);
+	}
 
 	//--------------------------------------------------------------------------
 	public void enableMenuItem(String txt, boolean sw) {
-		int nbr_menus = m_menu_bar.getComponentCount();
-		for (int mm=0; mm<nbr_menus; mm++) {
-			JMenu menu = (JMenu)m_menu_bar.getComponent(mm);
-			int nbr_menu_items = menu.getMenuComponentCount();
-			for (int mi=0; mi<nbr_menu_items; mi++) {
+		int nbrMenus = mMenuBar.getComponentCount();
+		for (int mm=0; mm<nbrMenus; mm++) {
+			JMenu menu = (JMenu)mMenuBar.getComponent(mm);
+			int nbrMenuItems = menu.getMenuComponentCount();
+			for (int mi=0; mi<nbrMenuItems; mi++) {
 				Component comp = menu.getMenuComponent(mi);
-				if (comp instanceof JMenuItem == false) {
+				if (!(comp instanceof JMenuItem)) {
 					continue;
 				}	// if - a separator or something
-				JMenuItem menu_item = (JMenuItem)comp;
-				String text = menu_item.getText();
+				JMenuItem menuItem = (JMenuItem)comp;
+				String text = menuItem.getText();
 				if (text.equals(txt)) {
-					menu_item.setEnabled(sw);
+					menuItem.setEnabled(sw);
 					return;
 				}	// if - the menu item we are looking for
 			}	// for - each menu item
 		}	// for - each menu
-	}	// enableMenuItem
+	}
 
 	//--------------------------------------------------------------------------
 	private enum WindowState {

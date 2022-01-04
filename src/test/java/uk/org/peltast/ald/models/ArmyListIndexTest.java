@@ -24,10 +24,11 @@ class ArmyListIndexTest {
 	@BeforeAll
 	static void setUpBeforeClass() {
 		index = new ArmyListIndex();
-		index.addEntry("12345", "Alexandrian Makedonian", "Book 2", "330BC", "400");
-		index.addEntry("84725", "Bagratid Armenian", "Book 3", "850AD", "350");
-		index.addEntry("h73cd", "Jewish Revolt", "Book 2", "70AD", "350");
-		index.addEntry("9jbnd", "Teutonic Orders", "Book 4", "1400AD", "450");
+		index.addEntry("12345", "", "Alexandrian Makedonian", "Book 2", "330BC", "400");
+		index.addEntry("84725", "", "Bagratid Armenian", "Book 3", "850AD", "350");
+		index.addEntry("h73cd", "Jewish Revolt", "Jewish Revolt - Zealots", "Book 2", "70AD", "350");
+		index.addEntry("lk3jl", "Jewish Revolt", "Jewish Revolt - Josephus", "Book 2", "70AD", "350");
+		index.addEntry("9jbnd", "", "Teutonic Orders", "Book 4", "1400AD", "450");
 	}
 
 	@Test
@@ -76,7 +77,7 @@ class ArmyListIndexTest {
 	final void testDelete() {
 		index.delete("9jbnd");
 		int count = index.getEntryCount();
-		assertEquals(3, count);
+		assertEquals(4, count);
 	}
 
 	@Test
@@ -101,9 +102,25 @@ class ArmyListIndexTest {
 	final void testUpdateEntry() {
 		String txt = index.toString();
 		log.info("Entries are:\n{}", txt);
-		index.updateEntry("h73cd", "Thracian", "Book 1", "250BC", "425");
+		index.updateEntry("84725", "", "Thracian", "Book 1", "250BC", "425");
 		txt = index.toString();
+		assertNotNull(txt);
 		log.info("After update entries are:\n{}", txt);
+	}
+
+	@Test
+	final void testGetGroups() {
+		String[] groups = index.getGroups();
+		assertEquals(1, groups.length);
+		log.info("Groups are: {}", (Object[])groups);
+	}
+
+	@Test
+	final void testGetArmiesInGroup() {
+		String group = "Jewish Revolt";
+		String[] armies = index.getArmiesInGroup(group);
+		assertEquals(2, armies.length);
+		log.info("Armies in group {} are: {}", group, armies);
 	}
 
 }

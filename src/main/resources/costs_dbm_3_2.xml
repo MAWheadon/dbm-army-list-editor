@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <costs rules="DBM" version="3.2">
+	<books>
+		<book name="1" description="Book 1: 3000 BC to 500 AD" />
+		<book name="2" description="Book 2: 500 BC to 476 AD" />
+		<book name="3" description="Book 3: 476 AD to 1071 AD" />
+		<book name="4" description="Book 4: 1071 AD to 1500 AD" />
+	</books>
 	<drill name="Reg">
 		<adjustments>
 			<adjustment name="ch" text="Chariots" cost="-1" />
