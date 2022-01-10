@@ -274,6 +274,11 @@ public class ArmyListDBMModel {
 	 * @param quantity The number of elements. */
 	public void setRowQuantity(int rowIndex, int quantity, ArmyListModelChange changes) {
 		setRowQuantity(rowIndex, quantity);
+		recalcTotals();
+		changes.setField(ArmyListConstants.ARMY_EL_COUNT, Integer.toString(mArmyTotals.mElements));
+		changes.setField(ArmyListConstants.ARMY_POINTS, Float.toString(mArmyTotals.mCost));
+		changes.setField(ArmyListConstants.ARMY_EL_EQUIV, Float.toString(mArmyTotals.mEquivalents));
+		changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, Integer.toString(getRowUnusedQuantity(rowIndex)));
 	}
 
 	//--------------------------------------------------------------------------
@@ -604,6 +609,14 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	public static void deleteArmy(String dataDir, String armyId) throws IOException {
+		String path = makeFileName(dataDir, armyId);
+	    Path pth = Paths.get(path);
+	    Files.deleteIfExists(pth);
+	    log.info("Army list {} deleted", armyId);
+	}
+
+	//--------------------------------------------------------------------------
 	private static int getAttributeAsInt(Element el, String attrName) {
 		String value = el.getAttribute(attrName);
 		if (value == null || value.isEmpty()) {
@@ -794,9 +807,8 @@ public class ArmyListDBMModel {
 	 * all the changes for the whole army from scratch.
 	 * @param changes To call the necessary change methods. */
 	public void getWholeArmy(ArmyListModelChange changes) {
-		changes.setField(ArmyListConstants.ARMY_ID, mArmyId);
-		changes.setField(ArmyListConstants.DESCRIPTION, mArmyName);
-		changes.setField(ArmyListConstants.BOOK, mArmyBook);
-		changes.setField(ArmyListConstants.YEAR, mArmyYear);
+		changes.setField(ArmyListConstants.ARMY_NAME, mArmyName);
+		changes.setField(ArmyListConstants.ARMY_BOOK, mArmyBook);
+		changes.setField(ArmyListConstants.ARMY_YEAR, mArmyYear);
 	}
 }

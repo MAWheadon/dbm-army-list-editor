@@ -291,6 +291,51 @@ public class ArmyListIndex {
 	}
 
 	//--------------------------------------------------------------------------
+	public void updateEntryGroupName(String id, String groupName) {
+		Entry entry = findEntry(id);
+		if (entry == null) {
+			throw new IllegalArgumentException("ID " + id + " not in index");
+		}
+		entry.mGroupName = groupName;
+	}
+
+	//--------------------------------------------------------------------------
+	public void updateEntryName(String id, String name) {
+		Entry entry = findEntry(id);
+		if (entry == null) {
+			throw new IllegalArgumentException("ID " + id + " not in index");
+		}
+		entry.mName = name;
+	}
+
+	//--------------------------------------------------------------------------
+	public void updateEntryBook(String id, String book) {
+		Entry entry = findEntry(id);
+		if (entry == null) {
+			throw new IllegalArgumentException("ID " + id + " not in index");
+		}
+		entry.mBook = book;
+	}
+
+	//--------------------------------------------------------------------------
+	public void updateEntryYear(String id, String year) {
+		Entry entry = findEntry(id);
+		if (entry == null) {
+			throw new IllegalArgumentException("ID " + id + " not in index");
+		}
+		entry.mYear = year;
+	}
+
+	//--------------------------------------------------------------------------
+	public void updateEntryPoints(String id, String points) {
+		Entry entry = findEntry(id);
+		if (entry == null) {
+			throw new IllegalArgumentException("ID " + id + " not in index");
+		}
+		entry.mPoints = points;
+	}
+
+	//--------------------------------------------------------------------------
 	private Entry findEntry(String id) {
 		for (Entry entry : mEntries) {
 			if (entry.mId.equals(id)) {

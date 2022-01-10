@@ -162,17 +162,17 @@ public class WTable {
 
 	//--------------------------------------------------------------------------
 	/** Assume the body. */
-	public void moveRowUp(int row_index) {
-		List<JComponent> row = mBodyComponents.remove(row_index);
-		mBodyComponents.add(row_index-1,row);
+	public void moveRowUp(int rowIndex) {
+		List<JComponent> row = mBodyComponents.remove(rowIndex);
+		mBodyComponents.add(rowIndex-1,row);
 		rebuildLayout();
 	}
 
 	//--------------------------------------------------------------------------
 	/** Assume the body. */
-	public void moveRowDown(int row_index) {
-		List<JComponent> row = mBodyComponents.remove(row_index);
-		mBodyComponents.add(row_index+1,row);
+	public void moveRowDown(int rowIndex) {
+		List<JComponent> row = mBodyComponents.remove(rowIndex);
+		mBodyComponents.add(rowIndex+1,row);
 		rebuildLayout();
 	}
 
@@ -184,21 +184,21 @@ public class WTable {
 			case FOOTER : return(mFooterComponents.size());
 			default : throw new IllegalArgumentException();
 		}	// switch
-	}	// getNumberOfRows
+	}
 
 	//--------------------------------------------------------------------------
 	public JComponent getComponent(WTableSection section, int row, int column) {
 		WTableLocation loc = new WTableLocation(section,row,column);
 		JComponent jcomp = getComponent(loc);
 		return(jcomp);
-	}	// getComponent
+	}
 
 	//--------------------------------------------------------------------------
 	public String getValue(WTableSection section, int row, int column) {
 		JComponent jcomp = getComponent(section,row,column);
 		String val = getFieldAsText(jcomp);
 		return(val);
-	}	// getValue
+	}
 
 	//--------------------------------------------------------------------------
 	public void setValue(WTableSection section, int row, int column, String val) {
@@ -210,12 +210,12 @@ public class WTable {
 				jtcomp.setText(val);
 			}	// if - only change if different to avoid firing unnecessary events.
 		}	// if
-	}	// setValue
+	}
 
 	//--------------------------------------------------------------------------
 	public JComponent getComponent(WTableLocation location) {
 		List<List<JComponent>> rows = mBodyComponents;
-		switch (location.m_section) {
+		switch (location.mSection) {
 			case HEADER : rows = mHeaderComponents;	break;
 			case FOOTER : rows = mFooterComponents;	break;
 			case BODY: rows = mBodyComponents;	break;
@@ -227,15 +227,15 @@ public class WTable {
 
 	//--------------------------------------------------------------------------
 	public JComponent getComponentFromDocument(Document doc) {
-		JComponent jcomp = get_component_from_document(WTableSection.BODY,doc);
+		JComponent jcomp = getComponentFromDocument(WTableSection.BODY,doc);
 		if (jcomp != null) {
 			return(jcomp);
 		}
-		jcomp = get_component_from_document(WTableSection.FOOTER,doc);
+		jcomp = getComponentFromDocument(WTableSection.FOOTER,doc);
 		if (jcomp != null) {
 			return(jcomp);
 		}
-		jcomp = get_component_from_document(WTableSection.HEADER,doc);
+		jcomp = getComponentFromDocument(WTableSection.HEADER,doc);
 		if (jcomp != null) {
 			return(jcomp);
 		}
@@ -243,7 +243,7 @@ public class WTable {
 	}
 
 	//--------------------------------------------------------------------------
-	private JComponent get_component_from_document(WTableSection section, Document doc) {
+	private JComponent getComponentFromDocument(WTableSection section, Document doc) {
 		List<List<JComponent>> comps = null;
 		switch (section) {
 			case HEADER : {
@@ -287,17 +287,17 @@ public class WTable {
 		JComponent jcomp = (JComponent)comp;
 		WTableLocation loc = findComponent(mBodyComponents, jcomp);
 		if (loc != null) {
-			loc.m_section = WTableSection.BODY;
+			loc.mSection = WTableSection.BODY;
 			return(loc);
 		}	// if
 		loc = findComponent(mHeaderComponents,jcomp);
 		if (loc != null) {
-			loc.m_section = WTableSection.HEADER;
+			loc.mSection = WTableSection.HEADER;
 			return(loc);
 		}	// if
 		loc = findComponent(mFooterComponents,jcomp);
 		if (loc != null) {
-			loc.m_section = WTableSection.FOOTER;
+			loc.mSection = WTableSection.FOOTER;
 			return(loc);
 		}	// if
 		String txt = "unknown";
@@ -305,7 +305,7 @@ public class WTable {
 			txt = ((JTextComponent)comp).getText();
 		}	// if
 		throw new IllegalArgumentException("Component "+txt+" not found.");
-	}	// getLocation
+	}
 
 	//--------------------------------------------------------------------------
 	private WTableLocation findComponent(List<List<JComponent>> compRows, JComponent comp) {
@@ -357,19 +357,19 @@ public class WTable {
 
 	//--------------------------------------------------------------------------
 	public class WTableLocation {
-		public WTableSection m_section;
-		public int mRow;
-		public int mCol;
+		public WTableSection mSection;
+		private final int mRow;
+		private final int mCol;
 		public WTableLocation(WTableSection section, int row, int column) {
-			m_section = section;
+			mSection = section;
 			mRow = row;
 			mCol = column;
 		}
 		public String toString() {
-			return(m_section.toString() + "," + mRow + "," + mCol);
+			return(mSection.toString() + "," + mRow + "," + mCol);
 		}
 		public boolean equals(WTableLocation loc) {
-			if (m_section != loc.m_section) {
+			if (mSection != loc.mSection) {
 				return(false);
 			}
 			if (mRow != loc.mRow) {
@@ -379,6 +379,12 @@ public class WTable {
 				return(false);
 			}
 			return(true);
+		}
+		public int getRow() {
+			return(mRow);
+		}
+		public int getColumn() {
+			return(mCol);
 		}
 	}
 

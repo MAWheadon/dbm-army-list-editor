@@ -12,6 +12,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -122,9 +124,14 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 				}
 				ed.setIndexChanges(ArmyListDBMSwing.this);
 				Component tab = mTabPane.add(ed.getJPanel());
-				tab.setName(model.getArmyId());
+				String armyId = model.getArmyId();
+				tab.setName(armyId);
+				int tabIndex = getTabIndex(armyId);
+				mTabPane.setTitleAt(tabIndex, "");
 				mIndexTableModel.addRow(new Object[] {"", "", "", "", ""});
-				mIndexTableModel.addHiddenValue(model.getArmyId());
+				mIndexTableModel.addHiddenValue(armyId);
+				log.info("Table model row count is {}, hidden row count is {}", mIndexTableModel.getRowCount(), mIndexTableModel.getHiddenRowCount());
+				mArmyListIndex.addEntry(armyId, "", "", "", "", "");
 				int tabCount = mTabPane.getTabCount();
 				mTabPane.setSelectedIndex(tabCount-1);
 			});
@@ -132,19 +139,17 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			mMenuItemDeleteArmy.addActionListener(e -> {
 				String armyId = getSelectedArmyId();
 				if (armyId != null) {
-					int tabIndex = getTab(armyId);
+					int tabIndex = getTabIndex(armyId);
 					if (tabIndex >= 0) {
 						errorMessage("Cannot delete as open in another tab");
 						return;
 					}
 					log.info("About to delete army {}", armyId);
-					
-					String path = ArmyListModelUtils.getDataPath();
 					try {
-						Files.delete(Paths.get(path));
+						ArmyListDBMModel.deleteArmy(mDataDir, armyId);
 					}
 					catch (IOException ioe) {
-						log.warn("File {} deletion failed", path, ioe);
+						log.warn("Failed to delete army because of", ioe);
 					}
 					mArmyListIndex.delete(armyId);
 					try {
@@ -167,10 +172,16 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 					ArmyListDBMModel armyList = new ArmyListDBMModel();
 					try {
 						armyList.loadFromFile(mDataDir, armyId);
-					} catch (IOException e1) {
-						errorMessage("Could not load army");
 					}
-					int tabIndex = getTab(armyId);
+					catch (NoSuchFileException nsfe) {
+						errorMessage("The army could not be found");
+						return;
+					}
+					catch (IOException e1) {
+						errorMessage("Could not load army");
+						return;
+					}
+					int tabIndex = getTabIndex(armyId);
 					if (tabIndex == -1) {
 						ArmyListDBMEditorSwing ed;
 						try {
@@ -219,8 +230,16 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 				// check if there are unsaved changes to any armies
 				// else
 				int reply = JOptionPane.showConfirmDialog(mFrame, "Are you sure you want to exit?", "Exit?",  JOptionPane.YES_NO_OPTION);
-				if (reply == JOptionPane.YES_OPTION)
-				{
+				if (reply == JOptionPane.YES_OPTION) {
+					if (mChanged) {
+						try {
+							saveIndex();
+						}
+						catch (Exception e1) {
+							log.warn("Error when saving index", e1);
+							errorMessage("Error when saving index: "+e1);
+						}
+					}
 					mFrame.dispose();
 				}
 			});
@@ -231,6 +250,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			mMenuFile.add(mMenuItemNewArmy);
 			mMenuFile.add(mMenuItemExit);
 			mPopupMenu.add(mMenuItemChangeGroupOfArmy);
+			mPopupMenu.add(mMenuItemEditArmy);
 			mPopupMenu.add(mMenuItemCopyArmy);
 			mPopupMenu.add(mMenuItemDeleteArmy);
 			
@@ -247,7 +267,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 						int row = target.getSelectedRow();
 						row = target.convertRowIndexToModel(row);
 						String armyId = (String)mIndexTableModel.getHiddenValue(row);
-						int tabIndex = getTab(armyId);
+						int tabIndex = getTabIndex(armyId);
 						if (tabIndex == -1) {
 							//ArmyListDBMEditorSwing ed = new ArmyListDBMEditorSwing(m_army_list_controller,armyId);
 							//mTabPane.add(ed);
@@ -294,12 +314,14 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 						}
 						*/
 					}	// for - each tab
-					try {
-						saveIndex();
-					}
-					catch (Exception e) {
-						log.warn("Error when saving index", e);
-						errorMessage("Error when saving index: "+e);
+					if (mChanged) {
+						try {
+							saveIndex();
+						}
+						catch (Exception e) {
+							log.warn("Error when saving index", e);
+							errorMessage("Error when saving index: "+e);
+						}
 					}
 				}	// windowClosing
 			});
@@ -374,6 +396,10 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 	    	return(obj);
 	    }
 
+	    public int getHiddenRowCount() {
+	    	return(mHidden.size());
+	    }
+
 	    public void addHiddenValue(Object value) {
 	    	mHidden.add(value);
 	    }
@@ -400,7 +426,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 	}
 
 	//--------------------------------------------------------------------------
-	private int getTab(String id) {
+	private int getTabIndex(String id) {
 		int tabCount = mTabPane.getTabCount();
 		for (int ii=0; ii<tabCount; ii++) {
 			Component comp = mTabPane.getComponentAt(ii);
@@ -429,20 +455,26 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 	public void change(String armyId, ArmyListConstants field, String value) {
 		int indexRow = getIndexRow(armyId);
 		switch (field) {
-			case DESCRIPTION :
+			case ARMY_NAME :
 				mIndexTableModel.setValueAt(value, indexRow, 1);
+				int tabIndex = getTabIndex(armyId);
+				mTabPane.setTitleAt(tabIndex, value);
+				mArmyListIndex.updateEntryName(armyId, value);
 				mChanged = true;
 				break;
-			case BOOK :
+			case ARMY_BOOK :
 				mIndexTableModel.setValueAt(value, indexRow, 2);
+				mArmyListIndex.updateEntryBook(armyId, value);
 				mChanged = true;
 				break;
-			case YEAR :
+			case ARMY_YEAR :
 				mIndexTableModel.setValueAt(value, indexRow, 3);
+				mArmyListIndex.updateEntryYear(armyId, value);
 				mChanged = true;
 				break;
-			case POINTS :
+			case ARMY_POINTS :
 				mIndexTableModel.setValueAt(value, indexRow, 4);
+				mArmyListIndex.updateEntryPoints(armyId, value);
 				mChanged = true;
 				break;
 			default	:
