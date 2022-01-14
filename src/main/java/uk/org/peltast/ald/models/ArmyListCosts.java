@@ -409,11 +409,16 @@ public class ArmyListCosts {
 
 	//--------------------------------------------------------------------------
 	float getTroopEquivalents(String drillName, String typeName, String gradeName) {
-		Drill drill = mCosts.getDrill(drillName);
-		Type type = drill.getType(typeName);
-		Troop troop = type.getTroop(gradeName);
-		float el = troop.getEquivalents();
-		return(el);
+		try {
+			Drill drill = mCosts.getDrill(drillName);
+			Type type = drill.getType(typeName);
+			Troop troop = type.getTroop(gradeName);
+			float el = troop.getEquivalents();
+			return(el);
+		} catch (IllegalArgumentException iae) {
+			log.info("Value not set: {}", iae.getMessage());	// some value is not set
+			return(0);
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -423,7 +428,7 @@ public class ArmyListCosts {
 	 * @param gradeName The grade e.g. S, O, F, I, X.
 	 * @param AdjustmenName The adjustment mnemonic, ch, gen, ally
 	 * @param count The number of those troops.
-	 * @return The total cost. */
+	 * @return The total cost, which will be 0 if the line is invalid. */
 	float getLineCost(String drillName, String typeName, String gradeName, String adjustmentMnemonic, int nbr) {
 		try {
 			Drill drill = mCosts.getDrill(drillName);
@@ -436,8 +441,7 @@ public class ArmyListCosts {
 			return(totalCost);
 		}
 		catch (IllegalArgumentException iae) {
-			// some value is not set
-			log.info("Value not set: {}", iae.getMessage());
+			log.info("Value not set: {}", iae.getMessage());	// some value is not set
 			return(0);
 		}
 	}

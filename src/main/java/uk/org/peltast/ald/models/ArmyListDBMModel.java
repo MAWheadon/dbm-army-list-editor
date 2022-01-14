@@ -588,6 +588,7 @@ public class ArmyListDBMModel {
 	public void loadFromFile(String dataDir, String armyId) throws IOException {
 		String path = makeFileName(dataDir, armyId);
 	    Path pth = Paths.get(path);
+	    log.info("About to read {}", pth);
 	    String content = new String(Files.readAllBytes(pth));
 	    loadFromXML(content);
 	}

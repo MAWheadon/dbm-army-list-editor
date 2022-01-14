@@ -136,6 +136,8 @@ public class ArmyListDBMEditorSwing {
 	//--------------------------------------------------------------------------
 	private JPanel setupArmyActionButtons() {
 		JButton btnClose = new JButton("Close");
+		JButton btnSave= new JButton("Save");
+		JButton btnReload = new JButton("Reload");
 		JButton btnPrint = new JButton("Print ...");
 		JButton btnExport = new JButton("Export to txt ...");
 		JPanel pnl = new JPanel();
@@ -143,6 +145,8 @@ public class ArmyListDBMEditorSwing {
 		pnl.add(btnPrint);
 		pnl.add(btnExport);
 		btnClose.addActionListener(this::doButtonClose);
+		btnSave.addActionListener(this::doButtonSave);
+		btnReload.addActionListener(this::doButtonReload);
 		btnPrint.addActionListener(this::doButtonPrint);
 		btnExport.addActionListener(e -> doButtonExportToText());
 		return(pnl);
@@ -456,6 +460,14 @@ public class ArmyListDBMEditorSwing {
 
 	//--------------------------------------------------------------------------
 	private void doButtonClose(ActionEvent ae) {
+	}
+
+	//--------------------------------------------------------------------------
+	private void doSaveClose(ActionEvent ae) {
+	}
+
+	//--------------------------------------------------------------------------
+	private void doReloadClose(ActionEvent ae) {
 	}
 
 	//--------------------------------------------------------------------------
