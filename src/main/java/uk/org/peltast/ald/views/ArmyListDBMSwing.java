@@ -164,42 +164,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			});
 
 			mMenuItemEditArmy.addActionListener(e -> {
-				String armyId = getSelectedArmyId();
-				if (armyId == null) {
-					errorMessage("Army not selected");
-				}
-				else {
-					ArmyListDBMModel armyList = new ArmyListDBMModel();
-					try {
-						armyList.loadFromFile(mDataDir, armyId);
-					}
-					catch (NoSuchFileException nsfe) {
-						errorMessage("The army could not be found");
-						return;
-					}
-					catch (IOException e1) {
-						errorMessage("Could not load army");
-						return;
-					}
-					int tabIndex = getTabIndex(armyId);
-					if (tabIndex == -1) {
-						ArmyListDBMEditorSwing ed;
-						try {
-							ed = new ArmyListDBMEditorSwing(armyList);
-						} catch (ParserConfigurationException | SAXException | IOException e1) {
-							String txt = "Error when trying to create army editor";
-							log.warn(txt , e1);
-							errorMessage(txt);
-							return;
-						}
-						mTabPane.add(ed.getJPanel());
-						int tabCount = mTabPane.getTabCount();
-						mTabPane.setSelectedIndex(tabCount-1);
-					}
-					else {
-						mTabPane.setSelectedIndex(tabIndex);	// else - just switch to that tab
-					}
-				}
+				editArmy();
 			});
 
 			mMenuItemCopyArmy.addActionListener(e -> {
@@ -254,33 +219,23 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			mPopupMenu.add(mMenuItemCopyArmy);
 			mPopupMenu.add(mMenuItemDeleteArmy);
 			
-			mIndexTable.setComponentPopupMenu(mPopupMenu);
-
 			// set up index tab
 			mIndexTableModel.setColumnIdentifiers(TABLE_COLUMNS);
 			mIndexTable.setAutoCreateRowSorter(true);
 			mIndexTable.addMouseListener(new MouseAdapter() {
 				@Override
-				public void mouseClicked(MouseEvent me) {
-					if (me.getClickCount() == 2) {
-						JTable target = (JTable)me.getSource();
-						int row = target.getSelectedRow();
-						row = target.convertRowIndexToModel(row);
-						String armyId = (String)mIndexTableModel.getHiddenValue(row);
-						int tabIndex = getTabIndex(armyId);
-						if (tabIndex == -1) {
-							//ArmyListDBMEditorSwing ed = new ArmyListDBMEditorSwing(m_army_list_controller,armyId);
-							//mTabPane.add(ed);
-							int tabCount = mTabPane.getTabCount();
-							mTabPane.setSelectedIndex(tabCount-1);
-						}	// if - we need to open a new tab
-						else {
-							mTabPane.setSelectedIndex(tabIndex);
-						}	// else - just switch to that tab
-					}	// if - double click
-				}	// mouseClicked
-			});	// MouseAdapter
-
+				public void mousePressed(MouseEvent me) {
+					if (SwingUtilities.isLeftMouseButton(me)) {
+						if (me.getClickCount() == 2) {
+							editArmy();
+						}
+					} else if (SwingUtilities.isRightMouseButton(me)) {
+						int row = mIndexTable.rowAtPoint(me.getPoint());
+						mIndexTable.setRowSelectionInterval(row, row);
+						mPopupMenu.show(mIndexTable, me.getPoint().x, me.getPoint().y);
+					}
+				}
+			});
 			JScrollPane indexSp = new JScrollPane(mIndexTable);
 			pnlMain.setName("Index");
 			mIndexTable.setFillsViewportHeight(true);
@@ -337,6 +292,49 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			}
 			mFrame.setVisible(true);
 		}	// run
+
+		private void editArmy() {
+			String armyId = getSelectedArmyId();
+			if (armyId == null) {
+				errorMessage("Army not selected");
+			}
+			else {
+				ArmyListDBMModel armyList = new ArmyListDBMModel();
+				try {
+					armyList.loadFromFile(mDataDir, armyId);
+				}
+				catch (NoSuchFileException nsfe) {
+					errorMessage("The army could not be found");
+					return;
+				}
+				catch (IOException e1) {
+					errorMessage("Could not load army");
+					return;
+				}
+				int tabIndex = getTabIndex(armyId);
+				if (tabIndex == -1) {
+					ArmyListDBMEditorSwing ed;
+					try {
+						ed = new ArmyListDBMEditorSwing(armyList);
+					} catch (ParserConfigurationException | SAXException | IOException e1) {
+						String txt = "Error when trying to create army editor";
+						log.warn(txt , e1);
+						errorMessage(txt);
+						return;
+					}
+					ed.setIndexChanges(ArmyListDBMSwing.this);
+					Component tab = mTabPane.add(ed.getJPanel());
+					tab.setName(armyId);
+					int tabCount = mTabPane.getTabCount();
+					String armyName = armyList.getArmyName();
+					mTabPane.setTitleAt(tabCount-1, armyName);
+					mTabPane.setSelectedIndex(tabCount-1);
+				}
+				else {
+					mTabPane.setSelectedIndex(tabIndex);	// else - just switch to that tab
+				}
+			}
+		}
 
 		//--------------------------------------------------------------------------
 		private void loadIndex() {

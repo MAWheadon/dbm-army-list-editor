@@ -208,7 +208,7 @@ public class ArmyListCosts {
 		Type getType(String typeName) {
 			Type type = mTypes.get(typeName);
 			if (type == null) {
-				throw new IllegalArgumentException("Unknown adjustmenr mnemonic "+ typeName);
+				throw new IllegalArgumentException("Unknown type mnemonic " + typeName);
 			}
 			return(type);
 		}
@@ -343,12 +343,11 @@ public class ArmyListCosts {
 	 * Not all drills have all types.
 	 * @param drillName Reg, Irr or Fort.
 	 * @return A list of the available types. */
-	String[] getTypes(String drillName) {
+	List<String> getTypes(String drillName) {
 		Drill drill = mCosts.getDrill(drillName);
 		Set<String> typeNames = drill.mTypes.keySet();
-		String[] typeNamesArray = typeNames.toArray(new String[0]);
-		Arrays.sort(typeNamesArray);
-		return(typeNamesArray);
+		List<String> lst = new ArrayList<>(typeNames);
+		return(lst);
 	}
 
 	//--------------------------------------------------------------------------
@@ -357,17 +356,17 @@ public class ArmyListCosts {
 	 * @param drillName Reg, Irr or Fort.
 	 * @param typeName Kn, Lh, etc.
 	 * @return A list of the available grades. */
-	String[] getTroopGradeList(String drillName, String typeName) {
+	List<String> getTroopGradeList(String drillName, String typeName) {
 		Drill drill = mCosts.getDrill(drillName);
 		Type type = drill.getType(typeName);
 		List<Troop> troops = type.mTroops;
-		String[] gradeList = new String[troops.size()];
 		int ii = 0;
+		List<String> lst = new ArrayList<>();
 		for (Troop troop : troops) {
 			String grade = troop.mGrade;
-			gradeList[ii++] = grade;
+			lst.add(grade);
 		}
-		return(gradeList);
+		return(lst);
 	}
 
 	//--------------------------------------------------------------------------

@@ -22,6 +22,7 @@ import java.util.List;
 
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -41,6 +42,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.Document;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLStreamException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,13 +53,16 @@ import uk.org.peltast.ald.models.ArmyListConstants;
 import uk.org.peltast.ald.models.ArmyListCosts;
 import uk.org.peltast.ald.models.ArmyListDBMModel;
 import uk.org.peltast.ald.models.ArmyListModelChange;
+import uk.org.peltast.ald.models.ArmyListModelUtils;
 import uk.org.peltast.ald.swing.WTable;
 import uk.org.peltast.ald.swing.WTable.WTableLocation;
 import uk.org.peltast.ald.swing.WTable.WTableSection;
 
 /** An editor for an individual army list. This editor is 'dumb' in that it only
  * ever displays values and accepts input. All changes are sent to the model, 
- * which then tells this class what the updates are.
+ * which then tells this class what the updates are. Thus methods like addRow 
+ * and deleteRow just inform the model and it then calls back via a change to 
+ * get the row added or deleted.
  * 
  * @author Mark Andrew Wheadon
  * @date 26th June 2012.
@@ -73,7 +78,6 @@ public class ArmyListDBMEditorSwing {
 	private JPanel mPnlMain = new JPanel(new BorderLayout());	// buttons go in north, inner panel goes in centre.
 	private Document mArmyDescriptionDoc;
 	private Document mArmyYearDoc;
-	private boolean mChanged = false;
 	private WTable mTable = new WTable(14);
 	private final Changes mChanges = new Changes();
 	private ArmyIndexModelChange mIndexChanges;
@@ -85,10 +89,15 @@ public class ArmyListDBMEditorSwing {
 	private JTextField mTfCostFile = new JTextField();
 
 	// army footer fields
-	private JTextField mTfArmyElementCount = new JTextField("");
 	private JTextField mTfArmyCosts = new JTextField("");
+	private JTextField mTfArmyElementCount = new JTextField("");
 	private JTextField mTfArmyEquiv = new JTextField("");
 	private JTextField mTfArmyHalf = new JTextField("");
+
+	private JTextField mTfCmd1Cost = new JTextField("");
+	private JTextField mTfCmd2Cost = new JTextField("");
+	private JTextField mTfCmd3Cost = new JTextField("");
+	private JTextField mTfCmd4Cost = new JTextField("");
 	private JTextField mTfCmd1ElCount = new JTextField("");
 	private JTextField mTfCmd2ElCount = new JTextField("");
 	private JTextField mTfCmd3ElCount = new JTextField("");
@@ -141,6 +150,8 @@ public class ArmyListDBMEditorSwing {
 		JButton btnPrint = new JButton("Print ...");
 		JButton btnExport = new JButton("Export to txt ...");
 		JPanel pnl = new JPanel();
+		pnl.add(btnSave);
+		pnl.add(btnReload);
 		pnl.add(btnClose);
 		pnl.add(btnPrint);
 		pnl.add(btnExport);
@@ -157,19 +168,19 @@ public class ArmyListDBMEditorSwing {
 		JPanel pnl = new JPanel();
 		pnl.add(new JLabel("Book"));
 		mCbBooks.addActionListener(e -> {
-			mChanged = true;
 			if (mIndexChanges != null) {
 				mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_BOOK, mCbBooks.getSelectedItem().toString());
 			}
+			mModel.setArmyBook(mCbBooks.getSelectedItem().toString());
 		});
 
 		mArmyYearDoc = mTfYear.getDocument();
 		mArmyYearDoc.addDocumentListener(new DocumentListener() {
 			private void change() {
-				mChanged = true;
 				if (mIndexChanges != null) {
 					mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_YEAR, mTfYear.getText());
 				}
+				mModel.setArmyYear(mTfYear.getText());
 			}
 			@Override
 			public void changedUpdate(DocumentEvent e) { change(); }
@@ -182,10 +193,10 @@ public class ArmyListDBMEditorSwing {
 		mArmyDescriptionDoc = mTfDescription.getDocument();
 		mArmyDescriptionDoc.addDocumentListener(new DocumentListener() {
 			private void change() {
-				mChanged = true;
 				if (mIndexChanges != null) {
 					mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_NAME, mTfDescription.getText());
 				}
+				mModel.setArmyName(mTfDescription.getText());
 			}
 			@Override
 			public void changedUpdate(DocumentEvent e) { change(); }
@@ -219,6 +230,7 @@ public class ArmyListDBMEditorSwing {
 	//--------------------------------------------------------------------------
 	private JPanel setupArmyButtons() {
 		mBtnAdd.addActionListener(this::doButtonAdd);
+		mBtnDelete.addActionListener(this::doButtonDelete);
 		mBtnMoveUp.addActionListener(this::doButtonMoveUp);
 		mBtnMoveDown.addActionListener(e -> {
 			int rowCount = mTable.getNumberOfRows(WTableSection.BODY);
@@ -243,36 +255,49 @@ public class ArmyListDBMEditorSwing {
 
 	//--------------------------------------------------------------------------
 	private JPanel setupArmyTable() {
-		JScrollPane mSpTbl = new JScrollPane(mTable.getPanel());
 		String[] headings = new String[] {"?","Qty","Description","Drill","Type","Grade","Adjustment","Cost","Total","Cmd 1","Cmd 2","Cmd 3","Cmd 4","Unused"};
 		mTable.addRow(WTableSection.HEADER,headings);
 
 		JLabel lbl = new JLabel("");
+
 		mTfArmyElementCount.setEditable(false);
 		mTfArmyCosts.setEditable(false);
 		mTfCmd1ElCount.setEditable(false);
 		mTfCmd2ElCount.setEditable(false);
 		mTfCmd3ElCount.setEditable(false);
 		mTfCmd4ElCount.setEditable(false);
-		JComponent[] arr = new JComponent[] {lbl,mTfArmyElementCount,lbl,lbl,lbl,lbl,lbl,lbl,mTfArmyCosts,mTfCmd1ElCount,mTfCmd2ElCount,mTfCmd3ElCount,mTfCmd4ElCount,lbl};
-		mTable.addRow(WTableSection.FOOTER,arr);
+		JComponent[] arr1 = new JComponent[] {lbl,mTfArmyCosts,new JLabel("(cost)"),lbl,lbl,lbl,lbl,lbl,new JLabel("Cost:"),mTfCmd1Cost,mTfCmd2Cost,mTfCmd3Cost,mTfCmd4Cost,lbl};
+		mTable.addRow(WTableSection.FOOTER,arr1);
+
+		mTfArmyElementCount.setEditable(false);
+		mTfArmyCosts.setEditable(false);
+		mTfCmd1ElCount.setEditable(false);
+		mTfCmd2ElCount.setEditable(false);
+		mTfCmd3ElCount.setEditable(false);
+		mTfCmd4ElCount.setEditable(false);
+		JComponent[] arr2 = new JComponent[] {lbl,mTfArmyElementCount,new JLabel("(elements)"),lbl,lbl,lbl,lbl,lbl,new JLabel("Elements:"),mTfCmd1ElCount,mTfCmd2ElCount,mTfCmd3ElCount,mTfCmd4ElCount,lbl};
+		mTable.addRow(WTableSection.FOOTER,arr2);
 
 		mTfArmyEquiv.setEditable(false);
 		mTfCmd1Eq.setEditable(false);
 		mTfCmd2Eq.setEditable(false);
 		mTfCmd3Eq.setEditable(false);
 		mTfCmd4Eq.setEditable(false);
-		JComponent[] arr2 = new JComponent[] {lbl,mTfArmyEquiv,new JLabel("(equivalents)"),lbl,lbl,lbl,lbl,lbl,new JLabel("Equivalents:"),mTfCmd1Eq,mTfCmd2Eq,mTfCmd3Eq,mTfCmd4Eq,lbl};
-		mTable.addRow(WTableSection.FOOTER,arr2);
+		JComponent[] arr3 = new JComponent[] {lbl,mTfArmyEquiv,new JLabel("(equivalents)"),lbl,lbl,lbl,lbl,lbl,new JLabel("Equivalents:"),mTfCmd1Eq,mTfCmd2Eq,mTfCmd3Eq,mTfCmd4Eq,lbl};
+		mTable.addRow(WTableSection.FOOTER,arr3);
 
 		mTfArmyHalf.setEditable(false);
 		mTfCmd1Bp.setEditable(false);
 		mTfCmd2Bp.setEditable(false);
 		mTfCmd3Bp.setEditable(false);
 		mTfCmd4Bp.setEditable(false);
-		JComponent[] arr3 = new JComponent[] {lbl,mTfArmyHalf,new JLabel("(half the army)"),lbl,lbl,lbl,lbl,lbl,new JLabel("Break points:"),mTfCmd1Bp,mTfCmd2Bp,mTfCmd3Bp,mTfCmd4Bp, lbl};
-		mTable.addRow(WTableSection.FOOTER,arr3);
-		return(mTable.getPanel());
+		JComponent[] arr4 = new JComponent[] {lbl,mTfArmyHalf,new JLabel("(half the army)"),lbl,lbl,lbl,lbl,lbl,new JLabel("Break point:"),mTfCmd1Bp,mTfCmd2Bp,mTfCmd3Bp,mTfCmd4Bp, lbl};
+		mTable.addRow(WTableSection.FOOTER,arr4);
+
+		JPanel pnl = new JPanel(new BorderLayout());
+		JScrollPane spTbl = new JScrollPane(mTable.getPanel());
+		pnl.add(spTbl, BorderLayout.CENTER);
+		return(pnl);
 	}
 
 	//--------------------------------------------------------------------------
@@ -303,23 +328,27 @@ public class ArmyListDBMEditorSwing {
 
 		@Override
 		public void addRow() {
-			// TODO Auto-generated method stub
-			
+			ArmyListDBMEditorSwing.this.addRow();
 		}
 
 		@Override
-		public void insertRow(int afterRow) {
-			// TODO Auto-generated method stub
+		public void deleteRow(int rowIndex) {
+			mTable.deleteRow(rowIndex);
 		}
 
 		@Override
-		public void deleteRow(int row) {
-			// TODO Auto-generated method stub
+		public void moveRowDown(int rowIndex) {
+			mTable.moveRowDown(rowIndex);
+		}
+
+		@Override
+		public void moveRowUp(int rowIndex) {
+			mTable.moveRowUp(rowIndex);
 		}
 
 		@Override
 		public void clear() {
-			// TODO Auto-generated method stub
+			mTable.removeAllRows();
 		}
 
 		@Override
@@ -328,10 +357,32 @@ public class ArmyListDBMEditorSwing {
 				case ARMY_BOOK : mCbBooks.setSelectedItem(value); break;
 				case ARMY_NAME : mTfDescription.setText(value); break;
 				case ARMY_YEAR: mTfYear.setText(value); break;
-				case ARMY_EL_COUNT : mTfArmyElementCount.setText(value); break;
+
 				case ARMY_POINTS : mTfArmyCosts.setText(value); break;
+				case ARMY_EL_COUNT : mTfArmyElementCount.setText(value); break;
 				case ARMY_EL_EQUIV : mTfArmyEquiv.setText(value); break;
 				case ARMY_HALF : mTfArmyHalf.setText(value); break;
+
+				case CMD1_COST : mTfCmd1Cost.setText(value); break;
+				case CMD1_EL_COUNT : mTfCmd1ElCount.setText(value); break;
+				case CMD1_EQUIV : mTfCmd1Eq.setText(value); break;
+				case CMD1_BP : mTfCmd1Bp.setText(value); break;
+
+				case CMD2_COST : mTfCmd2Cost.setText(value); break;
+				case CMD2_EL_COUNT : mTfCmd2ElCount.setText(value); break;
+				case CMD2_EQUIV : mTfCmd2Eq.setText(value); break;
+				case CMD2_BP : mTfCmd2Bp.setText(value); break;
+
+				case CMD3_COST : mTfCmd3Cost.setText(value); break;
+				case CMD3_EL_COUNT : mTfCmd3ElCount.setText(value); break;
+				case CMD3_EQUIV : mTfCmd3Eq.setText(value); break;
+				case CMD3_BP : mTfCmd3Bp.setText(value); break;
+
+				case CMD4_COST : mTfCmd4Cost.setText(value); break;
+				case CMD4_EL_COUNT : mTfCmd4ElCount.setText(value); break;
+				case CMD4_EQUIV : mTfCmd4Eq.setText(value); break;
+				case CMD4_BP : mTfCmd4Bp.setText(value); break;
+
 				default : log.warn("Unknown field {}", field);
 			}
 		}
@@ -339,13 +390,95 @@ public class ArmyListDBMEditorSwing {
 		@Override
 		public void setRowField(ArmyListConstants field, int row, String value) {
 			switch (field) {
-				case ROW_UNUSED: 
-					mTable.setValue(WTableSection.BODY, row, 13, value);
+				case ROW_DESC:
+					mTable.setValue(WTableSection.BODY, row, 2, value);
 					break;
 				default : log.warn("Unknown field {}", field);
 			}
 		}
-		
+
+		@Override
+		public void setRowField(ArmyListConstants field, int row, int nbr) {
+			switch (field) {
+				case ROW_QTY:
+					mTable.setValue(WTableSection.BODY, row, 1, nbr);
+					break;
+				case ROW_CMD1_QTY:
+					mTable.setValue(WTableSection.BODY, row, 9, nbr);
+					break;
+				case ROW_CMD2_QTY:
+					mTable.setValue(WTableSection.BODY, row, 10, nbr);
+					break;
+				case ROW_CMD3_QTY:
+					mTable.setValue(WTableSection.BODY, row, 11, nbr);
+					break;
+				case ROW_CMD4_QTY:
+					mTable.setValue(WTableSection.BODY, row, 12, nbr);
+					break;
+				case ROW_UNUSED:
+					mTable.setValue(WTableSection.BODY, row, 13, nbr);
+					break;
+				default : log.warn("Unknown field {}", field);
+			}
+		}
+
+		@Override
+		public void setRowField(ArmyListConstants field, int row, float nbr) {
+			switch (field) {
+				case ROW_TROOP_COST:
+					mTable.setValue(WTableSection.BODY, row, 7, nbr);
+					break;
+				case ROW_LINE_COST:
+					mTable.setValue(WTableSection.BODY, row, 8, nbr);
+					break;
+				default : log.warn("Unknown field {}", field);
+			}
+		}
+
+		@Override
+		public void setRowFieldList(ArmyListConstants field, int row, List<String> values, String selectedValue) {
+			JComponent comp = null;
+			switch (field) {
+				case ROW_DRILL:
+					comp = mTable.getComponent(WTableSection.BODY, row, 3);
+					setCombo(comp, values, selectedValue);
+					break;
+				case ROW_TYPE:
+					comp = mTable.getComponent(WTableSection.BODY, row, 4);
+					setCombo(comp, values, selectedValue);
+					break;
+				case ROW_GRADE:
+					comp = mTable.getComponent(WTableSection.BODY, row, 5);
+					setCombo(comp, values, selectedValue);
+					break;
+				case ROW_ADJ:
+					comp = mTable.getComponent(WTableSection.BODY, row, 6);
+					setCombo(comp, values, selectedValue);
+					break;
+				default : log.warn("Unknown field {}", field);
+			}
+		}
+
+		private void setCombo(JComponent comp, List<String> values, String selectedValue) {
+			if (comp instanceof JComboBox) {
+				JComboBox<String> cb = (JComboBox<String>)comp;
+				DefaultComboBoxModel<String> model = (DefaultComboBoxModel) cb.getModel();
+				ActionListener[] listeners = cb.getActionListeners();
+				for (ActionListener listener : listeners) {
+					cb.removeActionListener(listener);
+				}
+				model.removeAllElements();
+				for (String value : values) {
+					model.addElement(value);
+				}
+				if (selectedValue != null) {
+					cb.setSelectedItem(selectedValue);
+				}
+				for (ActionListener listener : listeners) {
+					cb.addActionListener(listener);
+				}
+			}
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -455,7 +588,21 @@ public class ArmyListDBMEditorSwing {
 
 	//--------------------------------------------------------------------------
 	private void doButtonAdd(ActionEvent ae) {
-		addRow();
+		mModel.addRow(mChanges);
+	}
+
+	//--------------------------------------------------------------------------
+	/** Tells the model which rows have been deleted.
+	 * @param ae */
+	private void doButtonDelete(ActionEvent ae) {
+		int rowCount = mTable.getNumberOfRows(WTableSection.BODY);
+		// always best to delete list entries backwards
+		for (int rr=rowCount-1; rr>=0; rr--) {
+			String tick = mTable.getValue(WTableSection.BODY, rr, 0);
+			if (tick.equals("Y")) {
+				mModel.deleteRow(rr, mChanges);
+			}
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -463,11 +610,33 @@ public class ArmyListDBMEditorSwing {
 	}
 
 	//--------------------------------------------------------------------------
-	private void doSaveClose(ActionEvent ae) {
+	private void doButtonSave(ActionEvent ae) {
+		if (mModel.isYetToBeSaved()) {
+			String dataDir = ArmyListModelUtils.getDataPath();
+			try {
+				mModel.saveToFile(dataDir);
+			} catch (IOException | XMLStreamException e) {
+				errorMessage("Saving army list failed because of : " + e.toString());
+			}
+		} else {
+			try {
+				mModel.saveToFile();
+			} catch (IOException | XMLStreamException e) {
+				errorMessage("Saving army list failed because of : " + e.toString());
+			}
+		}
 	}
 
 	//--------------------------------------------------------------------------
-	private void doReloadClose(ActionEvent ae) {
+	private void doButtonReload(ActionEvent ae) {
+		if (mModel.isYetToBeSaved()) {
+			errorMessage("Cannot reload as army list has yet to be saved");
+		}
+		try {
+			mModel.loadFromFile();
+		} catch (IOException e) {
+			errorMessage("Reloading army list failed because of : " + e.toString());
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -544,18 +713,6 @@ public class ArmyListDBMEditorSwing {
 
 	//--------------------------------------------------------------------------
 	private void addRow() {
-		// set all values, mostly defaulted
-		int qty = 1;
-		String desc = "";
-		String drill = "";
-		String type = "";
-		String grade = "";
-		String adj = "";
-		int cmd1Qty = 0;
-		int cmd2Qty = 0;
-		int cmd3Qty = 0;
-		int cmd4Qty = 0;
-
 		JCheckBox chkBox = new JCheckBox();
 		chkBox.addActionListener(e -> enableDeleteAndMoveButtons());
 		
@@ -567,25 +724,48 @@ public class ArmyListDBMEditorSwing {
 			mModel.setRowQuantity(loc.getRow(), (Integer)spnrQty.getValue(), mChanges);
 		});
 
-		JTextField tfDesc = new JTextField(desc);
+		JTextField tfDesc = new JTextField();
 		tfDesc.setName(ArmyListConstants.ROW_DESC.toString());
-		//tfDesc.getDocument().addDocumentListener(new DocumentListenerAnychange());
+		tfDesc.getDocument().addDocumentListener(new DocumentListener() {
+			private void change() {
+				WTableLocation loc = mTable.getLocation(spnrQty);
+				mModel.setRowDescription(loc.getRow(), tfDesc.getText());
+			}
+			@Override
+			public void changedUpdate(DocumentEvent e) { change(); }
+			@Override
+			public void insertUpdate(DocumentEvent e) { change(); }
+			@Override
+			public void removeUpdate(DocumentEvent e) { change(); }
+		});
 
 		JComboBox<String> cbDrill = new JComboBox<>(mDrills.toArray(new String[0]));
 		cbDrill.setName(ArmyListConstants.ROW_DRILL.toString());
-		cbDrill.addActionListener(e -> mChanged = true);
+		cbDrill.addActionListener(e -> {
+			WTableLocation loc = mTable.getLocation(cbDrill);
+			mModel.setRowDrill(loc.getRow(), cbDrill.getSelectedItem().toString(), mChanges);
+		});
 
 		JComboBox<String> cbType = new JComboBox<>();
 		cbType.setName(ArmyListConstants.ROW_TYPE.toString());
-		cbType.addActionListener(e -> mChanged = true);
+		cbType.addActionListener(e -> {
+			WTableLocation loc = mTable.getLocation(cbType);
+			mModel.setRowType(loc.getRow(), cbType.getSelectedItem().toString(), mChanges);
+		});
 
 		JComboBox<String> cbGrade = new JComboBox<>();
 		cbGrade.setName(ArmyListConstants.ROW_GRADE.toString());
-		cbGrade.addActionListener(e -> mChanged = true);
+		cbGrade.addActionListener(e -> {
+			WTableLocation loc = mTable.getLocation(cbGrade);
+			mModel.setRowGrade(loc.getRow(), cbGrade.getSelectedItem().toString(), mChanges);
+		});
 
 		JComboBox<String> cbAdj = new JComboBox<>();
 		cbAdj.setName(ArmyListConstants.ROW_ADJ.toString());
-		cbAdj.addActionListener(e -> mChanged = true);
+		cbAdj.addActionListener(e -> {
+			WTableLocation loc = mTable.getLocation(cbAdj);
+			mModel.setRowAdjustment(loc.getRow(), cbAdj.getSelectedItem().toString(), mChanges);
+		});
 
 		JTextField tfCostEach = new JTextField(4);
 		tfCostEach.setEditable(false);
@@ -596,19 +776,31 @@ public class ArmyListDBMEditorSwing {
 		SpinnerNumberModel snmCmd1 = new SpinnerNumberModel(0,0,100,1);
 		JSpinner spnrCmd1 = new JSpinner(snmCmd1);
 		spnrCmd1.setName(ArmyListConstants.ROW_CMD1_QTY.toString());
-		spnrCmd1.addChangeListener(e -> mChanged = true);
+		spnrCmd1.addChangeListener(e -> {
+			WTableLocation loc = mTable.getLocation(spnrCmd1);
+			mModel.setRowCommandQuantity(loc.getRow(), 1, (Integer)spnrCmd1.getValue(), mChanges);
+		});
 		SpinnerNumberModel snmCmd2 = new SpinnerNumberModel(0,0,100,1);
 		JSpinner spnrCmd2 = new JSpinner(snmCmd2);
 		spnrCmd2.setName(ArmyListConstants.ROW_CMD2_QTY.toString());
-		spnrCmd2.addChangeListener(e -> mChanged = true);
+		spnrCmd2.addChangeListener(e -> {
+			WTableLocation loc = mTable.getLocation(spnrCmd2);
+			mModel.setRowCommandQuantity(loc.getRow(), 2, (Integer)spnrCmd2.getValue(), mChanges);
+		});
 		SpinnerNumberModel snmCmd3 = new SpinnerNumberModel(0,0,100,1);
 		JSpinner spnrCmd3 = new JSpinner(snmCmd3);
 		spnrCmd3.setName(ArmyListConstants.ROW_CMD3_QTY.toString());
-		spnrCmd3.addChangeListener(e -> mChanged = true);
+		spnrCmd3.addChangeListener(e -> {
+			WTableLocation loc = mTable.getLocation(spnrCmd3);
+			mModel.setRowCommandQuantity(loc.getRow(), 3, (Integer)spnrCmd3.getValue(), mChanges);
+		});
 		SpinnerNumberModel snmCmd4 = new SpinnerNumberModel(0,0,100,1);
 		JSpinner spnrCmd4 = new JSpinner(snmCmd4);
 		spnrCmd4.setName(ArmyListConstants.ROW_CMD4_QTY.toString());
-		spnrCmd4.addChangeListener(e -> mChanged = true);
+		spnrCmd4.addChangeListener(e -> {
+			WTableLocation loc = mTable.getLocation(spnrCmd4);
+			mModel.setRowCommandQuantity(loc.getRow(), 4, (Integer)spnrCmd4.getValue(), mChanges);
+		});
 
 		JTextField tfElementsUnused = new JTextField(4);
 		tfElementsUnused.setEditable(false);
@@ -626,27 +818,6 @@ public class ArmyListDBMEditorSwing {
 				spnrCmd1, spnrCmd2, spnrCmd3, spnrCmd4,
 				tfElementsUnused};
 		mTable.addRow(WTableSection.BODY, arr);
-
-		// Now set values into the row to force recalculation
-		if (drill.length() > 0) {
-			cbDrill.setSelectedItem(drill);
-		}
-		if (type.length() > 0) {
-			cbType.setSelectedItem(type);
-		}
-		if (grade.length() > 0) {
-			cbGrade.setSelectedItem(grade);
-		}
-		if (adj.length() > 0) {
-			cbAdj.setSelectedItem(adj);
-		}
-		snmQty.setValue(qty);
-		snmCmd1.setValue(cmd1Qty);
-		snmCmd2.setValue(cmd2Qty);
-		snmCmd3.setValue(cmd3Qty);
-		snmCmd4.setValue(cmd4Qty);
-
-		mModel.addRow(mChanges);
 
 		JComponent editor = spnrQty.getEditor();
 		JFormattedTextField field = (JFormattedTextField) editor.getComponent(0);

@@ -17,63 +17,66 @@
 			<adjustment name="gen1" text="General (sole)" cost="10" />
 			<adjustment name="chgen1" text="Chariot general (sole)" cost="9" />
 			<adjustment name="mtdgen1" text="Mounted general (sole)" cost="11" />
+			<adjustment name="gen2" text="General (friend)" cost="15" />
+			<adjustment name="chgen2" text="Chariot general (friend)" cost="14" />
+			<adjustment name="mtdgen2" text="Mounted general (friend)" cost="16" />
 			<adjustment name="ally" text="Ally general" cost="10" />
 			<adjustment name="chally" text="Chariot ally general" cost="9" />
 			<adjustment name="mtdally" text="Mounted ally general" cost="11" />
 		</adjustments>
 		<types>
 			<type name="Kn">
-				<troop grade="S" ap="15" eq="1" adjs="ch,rr,gen,ally" />
-				<troop grade="O" ap="12" eq="1" adjs="ch,rr,gen,ally" />
-				<troop grade="I" ap="10" eq="1" adjs="rr,gen,ally" />
-				<troop grade="F" ap="11" eq="1" adjs="gen,ally" />
-				<troop grade="X" ap="13" eq="1" adjs="gen,ally" />
+				<troop grade="S" ap="15" eq="1" adjs="ch,rr,gen,gen1,gen2,ally" />
+				<troop grade="O" ap="12" eq="1" adjs="ch,rr,gen,gen1,gen2,ally" />
+				<troop grade="I" ap="10" eq="1" adjs="rr,gen,gen1,gen2,ally" />
+				<troop grade="F" ap="11" eq="1" adjs="gen,gen1,gen2,ally" />
+				<troop grade="X" ap="13" eq="1" adjs="gen,gen1,gen2,ally" />
 			</type>
 			<type name="Cv">
-				<troop grade="S" ap="10" eq="1" adjs="ch,gen,ally" />
-				<troop grade="O" ap="8" eq="1" adjs="ch,rr,gen,ally" />
-				<troop grade="I" ap="6" eq="1" adjs="rr,gen,ally" />
+				<troop grade="S" ap="10" eq="1" adjs="ch,gen,gen1,gen2,chgen,chgen1,chgen2,ally" />
+				<troop grade="O" ap="8" eq="1" adjs="ch,rr,gen,gen1,gen2,chgen,chgen1,chgen2,ally" />
+				<troop grade="I" ap="6" eq="1" adjs="rr,gen,gen1,gen2,chgen,chgen1,chgen2,ally" />
 			</type>
 			<type name="Lh">
-				<troop grade="S" ap="7" eq="1" adjs="gen,ally" />
-				<troop grade="O" ap="5" eq="1" adjs="gen,ally" />
-				<troop grade="I" ap="3" eq="1" adjs="gen,ally" />
-				<troop grade="F" ap="4" eq="1" adjs="gen,ally" />
+				<troop grade="S" ap="7" eq="1" adjs="gen,gen1,gen2,ally" />
+				<troop grade="O" ap="5" eq="1" adjs="gen,gen1,gen2,ally" />
+				<troop grade="I" ap="3" eq="1" adjs="gen,gen1,gen2,ally" />
+				<troop grade="F" ap="4" eq="1" adjs="gen,gen1,gen2,ally" />
 			</type>
 			<type name="Sp">
-				<troop grade="S" ap="7" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="O" ap="5" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="I" ap="4" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="S" ap="7" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="O" ap="5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="I" ap="4" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
 			</type>
 			<type name="Pk">
-				<troop grade="S" ap="5" eq="1" adjs="gen,ally" />
-				<troop grade="O" ap="4" eq="1" adjs="gen,ally" />
-				<troop grade="I" ap="3" eq="1" adjs="gen,ally" />
-				<troop grade="X" ap="4" eq="1" adjs="gen,ally" />
+				<troop grade="S" ap="5" eq="1" adjs="gen,gen1,gen2,ally" />
+				<troop grade="O" ap="4" eq="1" adjs="gen,gen1,gen2,ally" />
+				<troop grade="I" ap="3" eq="1" adjs="gen,gen1,gen2,ally" />
+				<troop grade="X" ap="4" eq="1" adjs="gen,gen1,gen2,ally" />
 			</type>
 			<type name="Bd">
-				<troop grade="S" ap="8" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="O" ap="6" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="I" ap="4" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="F" ap="6" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="X" ap="7" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="S" ap="8" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="O" ap="6" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="I" ap="4" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="F" ap="6" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="X" ap="7" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
 			</type>
 			<type name="Ax">
-				<troop grade="S" ap="4.5" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="O" ap="3.5" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="I" ap="2.5" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="X" ap="3.5" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="S" ap="4.5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="O" ap="3.5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="I" ap="2.5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="X" ap="3.5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
 			</type>
 			<type name="Bw">
-				<troop grade="S" ap="6.5" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="O" ap="5" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="I" ap="4" eq="1" adjs="gen,ally,mtd" />
-				<troop grade="X" ap="7" eq="1" adjs="gen,ally,mtd" />
+				<troop grade="S" ap="6.5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="O" ap="5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="I" ap="4" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="X" ap="7" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
 			</type>
 			<type name="Ps">
-				<troop grade="S" ap="3" eq="0.5" adjs="gen,ally,mtd" />
-				<troop grade="O" ap="2" eq="0.5" adjs="gen,ally,mtd" />
-				<troop grade="I" ap="1" eq="0.5" adjs="gen,ally" />
+				<troop grade="S" ap="3" eq="0.5" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="O" ap="2" eq="0.5" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="I" ap="1" eq="0.5" adjs="gen,gen1,gen2,ally" />
 				<troop grade="X" ap="6" eq="0.5" />
 			</type>
 			<type name="Art">

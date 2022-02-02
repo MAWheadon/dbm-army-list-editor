@@ -70,7 +70,7 @@ public class ArmyListDBMModel {
 	private String mArmyBook;
 	private String mArmyYear;
 	private ArmyListCosts mCosts;
-	private boolean mRecalcNeeded = false;
+	private Path mLastFileUsed;
 
 	// Calculated values not to be saved.
 	private class Totals {
@@ -168,7 +168,42 @@ public class ArmyListDBMModel {
 	//--------------------------------------------------------------------------
 	public void deleteRow(int index) {
 		mRows.remove(index);
-		mRecalcNeeded = true;
+	}
+
+	//--------------------------------------------------------------------------
+	public void deleteRow(int index, ArmyListModelChange changes) {
+		mRows.remove(index);
+		recalcTotals();
+		changes.deleteRow(index);
+		updateAllTotals(changes);
+	}
+
+	//--------------------------------------------------------------------------
+	private void updateAllTotals(ArmyListModelChange changes) {
+		changes.setField(ArmyListConstants.ARMY_HALF, Float.toString(mArmyTotals.mBreakPoint));
+		changes.setField(ArmyListConstants.ARMY_POINTS, Float.toString(mArmyTotals.mCost));
+		changes.setField(ArmyListConstants.ARMY_EL_COUNT, Integer.toString(mArmyTotals.mElements));
+		changes.setField(ArmyListConstants.ARMY_EL_EQUIV, Float.toString(mArmyTotals.mEquivalents));
+
+		changes.setField(ArmyListConstants.CMD1_BP, Float.toString(mCommandTotals[0].mBreakPoint));
+		changes.setField(ArmyListConstants.CMD1_COST, Float.toString(mCommandTotals[0].mCost));
+		changes.setField(ArmyListConstants.CMD1_EL_COUNT, Integer.toString(mCommandTotals[0].mElements));
+		changes.setField(ArmyListConstants.CMD1_EQUIV, Float.toString(mCommandTotals[0].mEquivalents));
+
+		changes.setField(ArmyListConstants.CMD2_BP, Float.toString(mCommandTotals[1].mBreakPoint));
+		changes.setField(ArmyListConstants.CMD2_COST, Float.toString(mCommandTotals[1].mCost));
+		changes.setField(ArmyListConstants.CMD2_EL_COUNT, Integer.toString(mCommandTotals[1].mElements));
+		changes.setField(ArmyListConstants.CMD2_EQUIV, Float.toString(mCommandTotals[1].mEquivalents));
+
+		changes.setField(ArmyListConstants.CMD3_BP, Float.toString(mCommandTotals[2].mBreakPoint));
+		changes.setField(ArmyListConstants.CMD3_COST, Float.toString(mCommandTotals[2].mCost));
+		changes.setField(ArmyListConstants.CMD3_EL_COUNT, Integer.toString(mCommandTotals[2].mElements));
+		changes.setField(ArmyListConstants.CMD3_EQUIV, Float.toString(mCommandTotals[2].mEquivalents));
+
+		changes.setField(ArmyListConstants.CMD4_BP, Float.toString(mCommandTotals[3].mBreakPoint));
+		changes.setField(ArmyListConstants.CMD4_COST, Float.toString(mCommandTotals[3].mCost));
+		changes.setField(ArmyListConstants.CMD4_EL_COUNT, Integer.toString(mCommandTotals[3].mElements));
+		changes.setField(ArmyListConstants.CMD4_EQUIV, Float.toString(mCommandTotals[3].mEquivalents));
 	}
 
 	//--------------------------------------------------------------------------
@@ -187,6 +222,7 @@ public class ArmyListDBMModel {
 	 * @return The index of the row just added. */
 	public int addRow(ArmyListModelChange changes) {
 		int row = addRow();
+		changes.addRow();
 		return(row);
 	}
 
@@ -265,7 +301,6 @@ public class ArmyListDBMModel {
 	public void setRowQuantity(int rowIndex, int quantity) {
 		Row row = mRows.get(rowIndex);
 		row.mQty = quantity;
-		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -278,7 +313,7 @@ public class ArmyListDBMModel {
 		changes.setField(ArmyListConstants.ARMY_EL_COUNT, Integer.toString(mArmyTotals.mElements));
 		changes.setField(ArmyListConstants.ARMY_POINTS, Float.toString(mArmyTotals.mCost));
 		changes.setField(ArmyListConstants.ARMY_EL_EQUIV, Float.toString(mArmyTotals.mEquivalents));
-		changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, Integer.toString(getRowUnusedQuantity(rowIndex)));
+		changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, getRowUnusedQuantity(rowIndex));
 	}
 
 	//--------------------------------------------------------------------------
@@ -298,7 +333,6 @@ public class ArmyListDBMModel {
 	public void setRowCommandQuantity(int rowIndex, int command, int quantity) {
 		Row row = mRows.get(rowIndex);
 		row.mCmdQty[command-1] = quantity;
-		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -345,7 +379,6 @@ public class ArmyListDBMModel {
 	public void setRowDrill(int rowIndex, String drill) {
 		Row row = mRows.get(rowIndex);
 		row.mDrillName = drill;
-		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -372,7 +405,6 @@ public class ArmyListDBMModel {
 	public void setRowType(int rowIndex, String type) {
 		Row row = mRows.get(rowIndex);
 		row.mTypeName = type;
-		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -399,7 +431,6 @@ public class ArmyListDBMModel {
 	public void setRowGrade(int rowIndex, String grade) {
 		Row row = mRows.get(rowIndex);
 		row.mGradeName = grade;
-		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -426,7 +457,6 @@ public class ArmyListDBMModel {
 	public void setRowAdjustment(int rowIndex, String adjustment) {
 		Row row = mRows.get(rowIndex);
 		row.mAdjustment = adjustment;
-		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -575,7 +605,6 @@ public class ArmyListDBMModel {
 		catch (Exception e) {
 			log.warn("Error loading army from XML.", e);
 		}
-		mRecalcNeeded = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -587,9 +616,16 @@ public class ArmyListDBMModel {
 	//--------------------------------------------------------------------------
 	public void loadFromFile(String dataDir, String armyId) throws IOException {
 		String path = makeFileName(dataDir, armyId);
-	    Path pth = Paths.get(path);
-	    log.info("About to read {}", pth);
-	    String content = new String(Files.readAllBytes(pth));
+	    mLastFileUsed = Paths.get(path);
+	    log.info("About to read {}", mLastFileUsed);
+	    String content = new String(Files.readAllBytes(mLastFileUsed));
+	    loadFromXML(content);
+	}
+
+	//--------------------------------------------------------------------------
+	public void loadFromFile() throws IOException {
+	    log.info("About to read {}", mLastFileUsed);
+	    String content = new String(Files.readAllBytes(mLastFileUsed));
 	    loadFromXML(content);
 	}
 
@@ -599,6 +635,17 @@ public class ArmyListDBMModel {
 	    Path pth = Paths.get(path);
 	    String content = getAsXML();
 	    Files.write(pth, content.getBytes());
+	}
+
+	//--------------------------------------------------------------------------
+	public void saveToFile() throws IOException, XMLStreamException {
+	    String content = getAsXML();
+	    Files.write(mLastFileUsed, content.getBytes());
+	}
+
+	//--------------------------------------------------------------------------
+	public boolean isYetToBeSaved() {
+	    return(mLastFileUsed == null);
 	}
 
 	//--------------------------------------------------------------------------
@@ -764,9 +811,6 @@ public class ArmyListDBMModel {
 	 * </ol>
 	 * */
 	private void recalcTotals() {
-		if (!mRecalcNeeded) {
-			return;
-		}
 		resetAllTotals();
 		int rowCount = mRows.size();
 		for (int rr=0; rr<rowCount; rr++) {
@@ -790,7 +834,6 @@ public class ArmyListDBMModel {
 		for (int cc=0; cc<4; cc++) {
 			mCommandTotals[cc].mBreakPoint = roundUpToNearestHalf(mCommandTotals[cc].mEquivalents / 3f);
 		}
-		mRecalcNeeded = false;
 	}
 
 	//--------------------------------------------------------------------------
@@ -811,5 +854,26 @@ public class ArmyListDBMModel {
 		changes.setField(ArmyListConstants.ARMY_NAME, mArmyName);
 		changes.setField(ArmyListConstants.ARMY_BOOK, mArmyBook);
 		changes.setField(ArmyListConstants.ARMY_YEAR, mArmyYear);
+		int rowCount = mRows.size();
+		for (int rr=0; rr<rowCount; rr++) {
+			Row row = mRows.get(rr);
+			changes.addRow();
+			changes.setRowField(ArmyListConstants.ROW_QTY, rr, row.mQty);
+			changes.setRowField(ArmyListConstants.ROW_DESC, rr, row.mDesc);
+			changes.setRowFieldList(ArmyListConstants.ROW_DRILL, rr, mCosts.getDrillList(), row.mDrillName);
+			if (row.mDrillName != null && !row.mDrillName.isEmpty()) {
+				changes.setRowFieldList(ArmyListConstants.ROW_TYPE, rr, mCosts.getTypes(row.mDrillName), row.mTypeName);
+			}
+			if (row.mDrillName != null && !row.mDrillName.isEmpty() && row.mTypeName != null && !row.mTypeName.isEmpty()) {
+				changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rr, mCosts.getTroopGradeList(row.mDrillName, row.mTypeName), row.mGradeName);
+			}
+			changes.setRowField(ArmyListConstants.ROW_CMD1_QTY, rr, row.mCmdQty[0]);
+			changes.setRowField(ArmyListConstants.ROW_CMD2_QTY, rr, row.mCmdQty[1]);
+			changes.setRowField(ArmyListConstants.ROW_CMD3_QTY, rr, row.mCmdQty[2]);
+			changes.setRowField(ArmyListConstants.ROW_CMD4_QTY, rr, row.mCmdQty[3]);
+			changes.setRowField(ArmyListConstants.ROW_UNUSED, rr, row.mUnusedElements);
+		}
+		recalcTotals();
+		updateAllTotals(changes);
 	}
 }

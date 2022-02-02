@@ -14,6 +14,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
+import javax.swing.SpinnerModel;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
@@ -210,6 +212,52 @@ public class WTable {
 				jtcomp.setText(val);
 			}	// if - only change if different to avoid firing unnecessary events.
 		}	// if
+	}
+
+	//--------------------------------------------------------------------------
+	public void setValue(WTableSection section, int row, int column, int nbr) {
+		JComponent jcomp = getComponent(section,row,column);
+		if (jcomp instanceof JTextComponent) {
+			JTextComponent jtcomp = (JTextComponent)jcomp;
+			String currentValue = jtcomp.getText();
+			String newValue = Integer.toString(nbr);
+			if (!currentValue.equals(newValue)) {
+				jtcomp.setText(newValue);
+			}	// if - only change if different to avoid firing unnecessary events.
+		}	// if
+		else if (jcomp instanceof JSpinner) {
+			JSpinner spin = (JSpinner)jcomp;
+			SpinnerModel mdl = spin.getModel();
+			if (mdl instanceof SpinnerNumberModel) {
+				SpinnerNumberModel nbrMdl = (SpinnerNumberModel)mdl;
+				if (nbrMdl.getNumber().intValue() != nbr) {
+					nbrMdl.setValue(nbr);
+				}
+			}
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	public void setValue(WTableSection section, int row, int column, float nbr) {
+		JComponent jcomp = getComponent(section,row,column);
+		if (jcomp instanceof JTextComponent) {
+			JTextComponent jtcomp = (JTextComponent)jcomp;
+			String currentValue = jtcomp.getText();
+			String newValue = Float.toString(nbr);
+			if (!currentValue.equals(newValue)) {
+				jtcomp.setText(newValue);
+			}	// if - only change if different to avoid firing unnecessary events.
+		}	// if
+		else if (jcomp instanceof JSpinner) {
+			JSpinner spin = (JSpinner)jcomp;
+			SpinnerModel mdl = spin.getModel();
+			if (mdl instanceof SpinnerNumberModel) {
+				SpinnerNumberModel nbrMdl = (SpinnerNumberModel)mdl;
+				if (nbrMdl.getNumber().floatValue() != nbr) {
+					nbrMdl.setValue(nbr);
+				}
+			}
+		}
 	}
 
 	//--------------------------------------------------------------------------
