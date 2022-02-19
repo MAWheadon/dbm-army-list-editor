@@ -199,6 +199,14 @@ public class ArmyListCosts {
 			return(text);
 		}
 
+		List<String> getAdjustmentTexts() {
+			List<String> texts = new ArrayList<>();
+			for (Adjustment adjustment : mAdjustments.values()) {
+				texts.add(adjustment.mText);
+			}
+			return(texts);
+		}
+
 		float getAdjustmentCost(String adjustmentMnemonic) {
 			Adjustment adjustment = getAdjustment(adjustmentMnemonic);
 			float cost = adjustment.getCost();
@@ -208,6 +216,7 @@ public class ArmyListCosts {
 		Type getType(String typeName) {
 			Type type = mTypes.get(typeName);
 			if (type == null) {
+				log.info("Known types are {}", mTypes.keySet());
 				throw new IllegalArgumentException("Unknown type mnemonic " + typeName);
 			}
 			return(type);
@@ -381,6 +390,31 @@ public class ArmyListCosts {
 		Drill drill = mCosts.getDrill(drillName);
 		String text = drill.getAdjustmentText(adjustmentMnemonic);
 		return(text);
+	}
+
+	//--------------------------------------------------------------------------
+	/** Gets all the adjustments texts for a troop.
+	 * @param drillName Reg, Irr, Fort
+	 * @return A map of the allowable adjustments for the given troop. the key is the mnemonic and the value is the English equivalent. */
+	List<NameValuePair> getAdjustments(String drillName, String typeName, String gradeName) {
+		List<NameValuePair> adjTexts = new ArrayList<>();
+		if (drillName == null || drillName.isEmpty() || typeName == null || typeName.isEmpty() || gradeName == null || gradeName.isEmpty()) {
+			return(adjTexts);	// empty
+		}
+		try {
+			Drill drill = mCosts.getDrill(drillName);
+			Type type = drill.getType(typeName);
+			Troop troop = type.getTroop(gradeName);
+			String[] adjMnemonics = troop.getAdjustments();
+			for (String adjMnemonic : adjMnemonics) {
+				String adjText = drill.getAdjustmentText(adjMnemonic);
+				NameValuePair pair = new NameValuePair(adjMnemonic, adjText);
+				adjTexts.add(pair);
+			}
+		} catch (IllegalArgumentException iae) {
+			log.warn("Incorrect value {}", iae.getMessage());
+		}
+		return(adjTexts);
 	}
 
 	//--------------------------------------------------------------------------

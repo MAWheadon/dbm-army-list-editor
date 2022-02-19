@@ -15,6 +15,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -373,6 +374,25 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	private void refreshAdjustments(int rowIndex, ArmyListModelChange changes) {
+		Row row = mRows.get(rowIndex);
+		String drillName = row.mDrillName;
+		String typeName = row.mTypeName;
+		String gradeName = row.mGradeName;
+		List<NameValuePair> adjustmentTexts = mCosts.getAdjustments(drillName, typeName, gradeName);
+		adjustmentTexts.add(0, new NameValuePair("", ""));	// not compulsory
+		String adj = row.mAdjustment;
+		if (!adj.isEmpty()) {
+			boolean found = false;
+			for (NameValuePair pair : adjustmentTexts) {
+				if (pair.getName().equals(adj)) found = true;				
+			}
+			if (!found) adj = "";
+		}
+		changes.setRowFieldList(ArmyListConstants.ROW_ADJ, rowIndex, adjustmentTexts, adj);
+	}
+
+	//--------------------------------------------------------------------------
 	/** Sets the troop's drill.
 	 * @param rowIndex The nought based row number.
 	 * @param drill The drill e.g. Irr, Reg, Fort. */
@@ -386,7 +406,16 @@ public class ArmyListDBMModel {
 	 * @param rowIndex The nought based row number.
 	 * @param drill The drill e.g. Irr, Reg, Fort. */
 	public void setRowDrill(int rowIndex, String drill, ArmyListModelChange changes) {
-		setRowDrill( rowIndex,  drill);
+		setRowDrill(rowIndex,  drill);
+		Row row = mRows.get(rowIndex);
+		String typeName = row.mTypeName;
+		List<String> types = mCosts.getTypes(drill);
+		if (!types.contains(typeName)) {
+			typeName = null;
+		}
+		changes.setRowFieldList(ArmyListConstants.ROW_TYPE, rowIndex, types, typeName);
+		refreshAdjustments(rowIndex, changes);
+		recalcTotals();
 	}
 
 	//--------------------------------------------------------------------------
@@ -413,6 +442,16 @@ public class ArmyListDBMModel {
 	 * @param type The type e.g. Kn, Cv, Pk, Bl */
 	public void setRowType(int rowIndex, String type, ArmyListModelChange changes) {
 		setRowType(rowIndex, type);
+		Row row = mRows.get(rowIndex);
+		String drill = row.mDrillName;
+		String grade = row.mGradeName;
+		List<String> grades = mCosts.getTroopGradeList(drill, type);
+		if (!grades.contains(grade)) {
+			grade = null;
+		}
+		changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rowIndex, grades, grade);
+		refreshAdjustments(rowIndex, changes);
+		recalcTotals();
 	}
 
 	//--------------------------------------------------------------------------
@@ -439,6 +478,8 @@ public class ArmyListDBMModel {
 	 * @param grade The grade e.g. S, O, I, F, X. */
 	public void setRowGrade(int rowIndex, String grade, ArmyListModelChange changes) {
 		setRowGrade(rowIndex, grade);
+		refreshAdjustments(rowIndex, changes);
+		recalcTotals();
 	}
 
 	//--------------------------------------------------------------------------
@@ -816,8 +857,9 @@ public class ArmyListDBMModel {
 		for (int rr=0; rr<rowCount; rr++) {
 			Row row = mRows.get(rr);
 			mArmyTotals.mElements += row.mQty;
-			float costEach = mCosts.getLineCost(row.mDrillName, row.mTypeName, row.mGradeName, row.mAdjustment, 1);
-			mArmyTotals.mCost += (costEach * row.mQty);
+			row.mCostPerElement = mCosts.getLineCost(row.mDrillName, row.mTypeName, row.mGradeName, row.mAdjustment, 1);
+			row.mTotalRowCost = row.mCostPerElement * row.mQty;
+			mArmyTotals.mCost += row.mTotalRowCost;
 			float eq = mCosts.getTroopEquivalents(row.mDrillName,row.mTypeName,row.mGradeName);
 			mArmyTotals.mEquivalents += (eq * row.mQty);
 			row.mUnusedElements = row.mQty - row.mCmdQty[0] - row.mCmdQty[1] - row.mCmdQty[2] - row.mCmdQty[3];
@@ -826,7 +868,7 @@ public class ArmyListDBMModel {
 				if (cmdQty > 0) {
 					mCommandTotals[cc].mElements += cmdQty;
 					mCommandTotals[cc].mEquivalents += (cmdQty * eq);
-					mCommandTotals[cc].mCost += (cmdQty * costEach);
+					mCommandTotals[cc].mCost += (cmdQty * row.mCostPerElement);
 				}
 			}	// for - reset all command totals
 		}	// for - each row
@@ -867,6 +909,8 @@ public class ArmyListDBMModel {
 			if (row.mDrillName != null && !row.mDrillName.isEmpty() && row.mTypeName != null && !row.mTypeName.isEmpty()) {
 				changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rr, mCosts.getTroopGradeList(row.mDrillName, row.mTypeName), row.mGradeName);
 			}
+			changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rr, row.mCostPerElement);
+			changes.setRowField(ArmyListConstants.ROW_LINE_COST, rr, row.mTotalRowCost);
 			changes.setRowField(ArmyListConstants.ROW_CMD1_QTY, rr, row.mCmdQty[0]);
 			changes.setRowField(ArmyListConstants.ROW_CMD2_QTY, rr, row.mCmdQty[1]);
 			changes.setRowField(ArmyListConstants.ROW_CMD3_QTY, rr, row.mCmdQty[2]);

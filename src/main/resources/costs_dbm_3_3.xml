@@ -154,7 +154,7 @@
 				<troop grade="I" ap="3" eq="1" adjs="gen, mtd, rr" />
 				<troop grade="X" ap="4" eq="1" adjs="gen, mtd, rr" />
 			</type>
-			<type name="Bl">
+			<type name="Bd">
 				<troop grade="S" ap="7" eq="1" adjs="gen, mtd, rr" />
 				<troop grade="O" ap="5" eq="1" adjs="gen, mtd, rr" />
 				<troop grade="I" ap="3" eq="1" adjs="gen, mtd, rr" />

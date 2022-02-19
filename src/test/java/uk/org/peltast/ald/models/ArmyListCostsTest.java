@@ -37,16 +37,16 @@ class ArmyListCostsTest {
 	//--------------------------------------------------------------------------
 	@Test
 	final void testGetTypes() {
-		String[] regTypes = costs.getTypes("Reg");
-		assertEquals(13, regTypes.length, "There should be 13 Reg types");
+		List<String> regTypes = costs.getTypes("Reg");
+		assertEquals(13, regTypes.size(), "There should be 13 Reg types");
 		log.info("Reg types: {}", Arrays.asList(regTypes));
 
-		String[] irrTypes = costs.getTypes("Irr");
-		assertEquals(17, irrTypes.length, "There should be 17 Irr types");
+		List<String> irrTypes = costs.getTypes("Irr");
+		assertEquals(17, irrTypes.size(), "There should be 17 Irr types");
 		log.info("Irr types: {}", Arrays.asList(irrTypes));
 
-		String[] fortTypes = costs.getTypes("Fort");
-		assertEquals(2, fortTypes.length, "There should be 2 Fort types");
+		List<String> fortTypes = costs.getTypes("Fort");
+		assertEquals(2, fortTypes.size(), "There should be 2 Fort types");
 		log.info("Fort types: {}", Arrays.asList(fortTypes));
 	}
 
@@ -54,16 +54,16 @@ class ArmyListCostsTest {
 	@Test
 	final void testGetTroopGradeList() {
 		// Just a few examples
-		String[] regKnGrades = costs.getTroopGradeList("Reg", "Kn");
-		assertEquals(5, regKnGrades.length, "There should be 5 grades of Reg Kn");
+		List<String> regKnGrades = costs.getTroopGradeList("Reg", "Kn");
+		assertEquals(5, regKnGrades.size(), "There should be 5 grades of Reg Kn");
 		log.info("Reg Kn grades: {}", Arrays.asList(regKnGrades));
 
-		String[] irrAxGrades = costs.getTroopGradeList("Irr", "Ax");
-		assertEquals(4, irrAxGrades.length, "There should be 4 grades of Irr Ax");
+		List<String> irrAxGrades = costs.getTroopGradeList("Irr", "Ax");
+		assertEquals(4, irrAxGrades.size(), "There should be 4 grades of Irr Ax");
 		log.info("Irr Ax grades: {}", Arrays.asList(irrAxGrades));
 
-		String[] fortPFGrades = costs.getTroopGradeList("Fort", "PF");
-		assertEquals(1, fortPFGrades.length, "There should be 1 grade of Fort PF");
+		List<String> fortPFGrades = costs.getTroopGradeList("Fort", "PF");
+		assertEquals(1, fortPFGrades.size(), "There should be 1 grade of Fort PF");
 		log.info("Fort PF grades: {}", Arrays.asList(fortPFGrades));
 	}
 

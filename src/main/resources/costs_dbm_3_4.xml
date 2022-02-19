@@ -12,17 +12,17 @@
 			<adjustment name="mtd" text="Mounted" cost="1" />
 			<adjustment name="rr" text="Rear rank" cost="-2" />
 			<adjustment name="gen" text="General" cost="20" />
-			<adjustment name="chgen" text="Chariot general" cost="19" />
-			<adjustment name="mtdgen" text="Mounted general" cost="21" />
-			<adjustment name="gen1" text="General (sole)" cost="10" />
-			<adjustment name="chgen1" text="Chariot general (sole)" cost="9" />
-			<adjustment name="mtdgen1" text="Mounted general (sole)" cost="11" />
-			<adjustment name="gen2" text="General (friend)" cost="15" />
-			<adjustment name="chgen2" text="Chariot general (friend)" cost="14" />
-			<adjustment name="mtdgen2" text="Mounted general (friend)" cost="16" />
-			<adjustment name="ally" text="Ally general" cost="10" />
-			<adjustment name="chally" text="Chariot ally general" cost="9" />
-			<adjustment name="mtdally" text="Mounted ally general" cost="11" />
+			<adjustment name="chgen" text="General chrt" cost="19" />
+			<adjustment name="mtdgen" text="General mntd" cost="21" />
+			<adjustment name="gen1" text="General 1of1" cost="10" />
+			<adjustment name="chgen1" text="General chrt 1of1" cost="9" />
+			<adjustment name="mtdgen1" text="General mntd 1of1" cost="11" />
+			<adjustment name="gen2" text="General 1of2" cost="15" />
+			<adjustment name="chgen2" text="General chrt 1of2" cost="14" />
+			<adjustment name="mtdgen2" text="General mntd 1of2" cost="16" />
+			<adjustment name="ally" text="General ally" cost="10" />
+			<adjustment name="chally" text="General ally chrt" cost="9" />
+			<adjustment name="mtdally" text="General ally mntd" cost="11" />
 		</adjustments>
 		<types>
 			<type name="Kn">
@@ -109,11 +109,11 @@
 			<adjustment name="mtd" text="Mounted" cost="1" />
 			<adjustment name="rr" text="Rear rank" cost="-1" />
 			<adjustment name="gen" text="General" cost="10" />
-			<adjustment name="chgen" text="Chariot general" cost="9" />
-			<adjustment name="mtdgen" text="Mounted general" cost="11" />
-			<adjustment name="ally" text="Ally" cost="5" />
-			<adjustment name="chally" text="Chariot ally general" cost="4" />
-			<adjustment name="mtdally" text="Mounted ally general" cost="6" />
+			<adjustment name="chgen" text="General chrt" cost="9" />
+			<adjustment name="mtdgen" text="General mntd" cost="11" />
+			<adjustment name="ally" text="General ally" cost="5" />
+			<adjustment name="chally" text="General chrt ally" cost="4" />
+			<adjustment name="mtdally" text="General ally mntd" cost="6" />
 		</adjustments>
 		<types>
 			<type name="El">
@@ -157,7 +157,7 @@
 				<troop grade="I" ap="3" eq="1" adjs="gen, mtd, rr" />
 				<troop grade="X" ap="4" eq="1" adjs="gen, mtd, rr" />
 			</type>
-			<type name="Bl">
+			<type name="Bd">
 				<troop grade="S" ap="7" eq="1" adjs="gen, mtd, rr" />
 				<troop grade="O" ap="5" eq="1" adjs="gen, mtd, rr" />
 				<troop grade="I" ap="3" eq="1" adjs="gen, mtd, rr" />

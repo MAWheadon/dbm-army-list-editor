@@ -1,6 +1,8 @@
 package uk.org.peltast.ald.views;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -30,6 +32,7 @@ import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -40,6 +43,7 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.plaf.basic.BasicComboBoxRenderer;
 import javax.swing.text.Document;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLStreamException;
@@ -54,6 +58,7 @@ import uk.org.peltast.ald.models.ArmyListCosts;
 import uk.org.peltast.ald.models.ArmyListDBMModel;
 import uk.org.peltast.ald.models.ArmyListModelChange;
 import uk.org.peltast.ald.models.ArmyListModelUtils;
+import uk.org.peltast.ald.models.NameValuePair;
 import uk.org.peltast.ald.swing.WTable;
 import uk.org.peltast.ald.swing.WTable.WTableLocation;
 import uk.org.peltast.ald.swing.WTable.WTableSection;
@@ -260,17 +265,15 @@ public class ArmyListDBMEditorSwing {
 
 		JLabel lbl = new JLabel("");
 
-		mTfArmyElementCount.setEditable(false);
 		mTfArmyCosts.setEditable(false);
-		mTfCmd1ElCount.setEditable(false);
-		mTfCmd2ElCount.setEditable(false);
-		mTfCmd3ElCount.setEditable(false);
-		mTfCmd4ElCount.setEditable(false);
+		mTfCmd1Cost.setEditable(false);
+		mTfCmd2Cost.setEditable(false);
+		mTfCmd3Cost.setEditable(false);
+		mTfCmd4Cost.setEditable(false);
 		JComponent[] arr1 = new JComponent[] {lbl,mTfArmyCosts,new JLabel("(cost)"),lbl,lbl,lbl,lbl,lbl,new JLabel("Cost:"),mTfCmd1Cost,mTfCmd2Cost,mTfCmd3Cost,mTfCmd4Cost,lbl};
 		mTable.addRow(WTableSection.FOOTER,arr1);
 
 		mTfArmyElementCount.setEditable(false);
-		mTfArmyCosts.setEditable(false);
 		mTfCmd1ElCount.setEditable(false);
 		mTfCmd2ElCount.setEditable(false);
 		mTfCmd3ElCount.setEditable(false);
@@ -436,7 +439,7 @@ public class ArmyListDBMEditorSwing {
 		}
 
 		@Override
-		public void setRowFieldList(ArmyListConstants field, int row, List<String> values, String selectedValue) {
+		public <E> void setRowFieldList(ArmyListConstants field, int row, List<E> values, String selectedValue) {
 			JComponent comp = null;
 			switch (field) {
 				case ROW_DRILL:
@@ -459,20 +462,33 @@ public class ArmyListDBMEditorSwing {
 			}
 		}
 
-		private void setCombo(JComponent comp, List<String> values, String selectedValue) {
+		private <E> void setCombo(JComponent comp, List<E> values, String selectedValue) {
 			if (comp instanceof JComboBox) {
-				JComboBox<String> cb = (JComboBox<String>)comp;
-				DefaultComboBoxModel<String> model = (DefaultComboBoxModel) cb.getModel();
+				JComboBox<E> cb = (JComboBox<E>)comp;
 				ActionListener[] listeners = cb.getActionListeners();
 				for (ActionListener listener : listeners) {
 					cb.removeActionListener(listener);
 				}
+				DefaultComboBoxModel<E> model = (DefaultComboBoxModel<E>) cb.getModel();
 				model.removeAllElements();
-				for (String value : values) {
+				int selectedIndex = -1;
+				int index = 0;
+				for (E value : values) {
 					model.addElement(value);
+					if (value instanceof NameValuePair) {
+						NameValuePair pair = (NameValuePair)value;
+						if (pair.getName().equals(selectedValue)) {
+							selectedIndex = index;
+						}
+					} else {
+						if (value.toString().equals(selectedValue)) {
+							selectedIndex = index;
+						}
+					}
+					index++;
 				}
-				if (selectedValue != null) {
-					cb.setSelectedItem(selectedValue);
+				if (selectedIndex != -1) {
+					cb.setSelectedIndex(selectedIndex);
 				}
 				for (ActionListener listener : listeners) {
 					cb.addActionListener(listener);
@@ -712,12 +728,27 @@ public class ArmyListDBMEditorSwing {
 	}
 
 	//--------------------------------------------------------------------------
+    class NameValuePairRenderer extends BasicComboBoxRenderer {
+    	@Override
+        public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+            if (value != null) {
+            	NameValuePair pair = (NameValuePair)value;
+                setText(pair.getValue());
+            }
+            return this;
+        }
+    }
+
+	//--------------------------------------------------------------------------
 	private void addRow() {
 		JCheckBox chkBox = new JCheckBox();
 		chkBox.addActionListener(e -> enableDeleteAndMoveButtons());
 		
 		SpinnerNumberModel snmQty = new SpinnerNumberModel(1,1,200,1);
 		JSpinner spnrQty = new JSpinner(snmQty);
+		spnrQty.setValue(1);
 		spnrQty.setName(ArmyListConstants.ROW_QTY.toString());
 		spnrQty.addChangeListener(e -> {
 			WTableLocation loc = mTable.getLocation(spnrQty);
@@ -760,8 +791,9 @@ public class ArmyListDBMEditorSwing {
 			mModel.setRowGrade(loc.getRow(), cbGrade.getSelectedItem().toString(), mChanges);
 		});
 
-		JComboBox<String> cbAdj = new JComboBox<>();
+		JComboBox<NameValuePair> cbAdj = new JComboBox<>();
 		cbAdj.setName(ArmyListConstants.ROW_ADJ.toString());
+		cbAdj.setRenderer(new NameValuePairRenderer());
 		cbAdj.addActionListener(e -> {
 			WTableLocation loc = mTable.getLocation(cbAdj);
 			mModel.setRowAdjustment(loc.getRow(), cbAdj.getSelectedItem().toString(), mChanges);
