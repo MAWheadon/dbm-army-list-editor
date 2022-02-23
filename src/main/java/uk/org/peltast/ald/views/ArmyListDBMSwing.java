@@ -11,10 +11,7 @@ import java.awt.event.WindowListener;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,28 +109,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			JPanel pnlMain = new JPanel(new BorderLayout());
 
 			mMenuItemNewArmy.addActionListener(e -> {
-				ArmyListDBMModel model = new ArmyListDBMModel();
-				ArmyListDBMEditorSwing ed;
-				try {
-					ed = new ArmyListDBMEditorSwing(model);
-				} catch (ParserConfigurationException | SAXException | IOException e1) {
-					String txt = "Error when trying to create army editor for a new army";
-					log.warn(txt , e1);
-					errorMessage(txt);
-					return;
-				}
-				ed.setIndexChanges(ArmyListDBMSwing.this);
-				Component tab = mTabPane.add(ed.getJPanel());
-				String armyId = model.getArmyId();
-				tab.setName(armyId);
-				int tabIndex = getTabIndex(armyId);
-				mTabPane.setTitleAt(tabIndex, "");
-				mIndexTableModel.addRow(new Object[] {"", "", "", "", ""});
-				mIndexTableModel.addHiddenValue(armyId);
-				log.info("Table model row count is {}, hidden row count is {}", mIndexTableModel.getRowCount(), mIndexTableModel.getHiddenRowCount());
-				mArmyListIndex.addEntry(armyId, "", "", "", "", "");
-				int tabCount = mTabPane.getTabCount();
-				mTabPane.setSelectedIndex(tabCount-1);
+				newArmy();
 			});
 
 			mMenuItemDeleteArmy.addActionListener(e -> {
@@ -231,8 +207,11 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 						}
 					} else if (SwingUtilities.isRightMouseButton(me)) {
 						int row = mIndexTable.rowAtPoint(me.getPoint());
-						mIndexTable.setRowSelectionInterval(row, row);
-						mPopupMenu.show(mIndexTable, me.getPoint().x, me.getPoint().y);
+						log.info("Index row selected was {}", row);
+						if (row >= 0) {
+							mIndexTable.setRowSelectionInterval(row, row);
+							mPopupMenu.show(mIndexTable, me.getPoint().x, me.getPoint().y);
+						}
 					}
 				}
 			});
@@ -293,6 +272,33 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			mFrame.setVisible(true);
 		}	// run
 
+		//----------------------------------------------------------------------
+		private void newArmy() {
+			ArmyListDBMModel model = new ArmyListDBMModel();
+			ArmyListDBMEditorSwing ed;
+			try {
+				ed = new ArmyListDBMEditorSwing(model);
+			} catch (ParserConfigurationException | SAXException | IOException e1) {
+				String txt = "Error when trying to create army editor for a new army";
+				log.warn(txt , e1);
+				errorMessage(txt);
+				return;
+			}
+			ed.setIndexChanges(ArmyListDBMSwing.this);
+			Component tab = mTabPane.add(ed.getJPanel());
+			String armyId = model.getArmyId();
+			tab.setName(armyId);
+			int tabIndex = getTabIndex(armyId);
+			mTabPane.setTitleAt(tabIndex, "");
+			mIndexTableModel.addRow(new Object[] {"", "", "", "", ""});
+			mIndexTableModel.addHiddenValue(armyId);
+			log.info("Table model row count is {}, hidden row count is {}", mIndexTableModel.getRowCount(), mIndexTableModel.getHiddenRowCount());
+			mArmyListIndex.addEntry(armyId, "", "", "", "", "");
+			int tabCount = mTabPane.getTabCount();
+			mTabPane.setSelectedIndex(tabCount-1);
+		}
+
+		//----------------------------------------------------------------------
 		private void editArmy() {
 			String armyId = getSelectedArmyId();
 			if (armyId == null) {

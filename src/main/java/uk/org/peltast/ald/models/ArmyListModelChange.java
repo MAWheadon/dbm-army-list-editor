@@ -4,6 +4,10 @@ import java.util.List;
 import java.util.Map;
 
 public interface ArmyListModelChange {
+
+	/** changed status */
+	public void changed(boolean changed);
+
 	/** Add a row. */
 	public void addRow();
 

@@ -72,6 +72,7 @@ public class ArmyListDBMModel {
 	private String mArmyYear;
 	private ArmyListCosts mCosts;
 	private Path mLastFileUsed;
+	private boolean mChanged = false; 
 
 	// Calculated values not to be saved.
 	private class Totals {
@@ -112,6 +113,8 @@ public class ArmyListDBMModel {
 	//--------------------------------------------------------------------------
 	public void setArmyCosts(ArmyListCosts costs, ArmyListModelChange changes) {
 		mCosts = costs;
+		updateAllTotals(changes);
+		changes.changed(true);
 	}
 
 	//--------------------------------------------------------------------------
@@ -177,6 +180,7 @@ public class ArmyListDBMModel {
 		recalcTotals();
 		changes.deleteRow(index);
 		updateAllTotals(changes);
+		changes.changed(true);
 	}
 
 	//--------------------------------------------------------------------------
@@ -224,6 +228,7 @@ public class ArmyListDBMModel {
 	public int addRow(ArmyListModelChange changes) {
 		int row = addRow();
 		changes.addRow();
+		changes.changed(true);
 		return(row);
 	}
 
@@ -276,6 +281,12 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	public void setArmyName(String name, ArmyListModelChange change) {
+		mArmyName = name;
+		setChanged(change);
+	}
+
+	//--------------------------------------------------------------------------
 	public String getArmyBook() {
 		return(mArmyBook);
 	}
@@ -286,6 +297,12 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	public void setArmyBook(String book, ArmyListModelChange change) {
+		mArmyBook = book;
+		setChanged(change);
+	}
+
+	//--------------------------------------------------------------------------
 	public String getArmyYear() {
 		return(mArmyYear);
 	}
@@ -293,6 +310,12 @@ public class ArmyListDBMModel {
 	//--------------------------------------------------------------------------
 	public void setArmyYear(String year) {
 		mArmyYear = year;
+	}
+
+	//--------------------------------------------------------------------------
+	public void setArmyYear(String year, ArmyListModelChange change) {
+		mArmyYear = year;
+		setChanged(change);
 	}
 
 	//--------------------------------------------------------------------------
@@ -315,6 +338,7 @@ public class ArmyListDBMModel {
 		changes.setField(ArmyListConstants.ARMY_POINTS, Float.toString(mArmyTotals.mCost));
 		changes.setField(ArmyListConstants.ARMY_EL_EQUIV, Float.toString(mArmyTotals.mEquivalents));
 		changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, getRowUnusedQuantity(rowIndex));
+		changes.changed(true);
 	}
 
 	//--------------------------------------------------------------------------
@@ -343,6 +367,7 @@ public class ArmyListDBMModel {
 	 * @param quantity The number of elements. */
 	public void setRowCommandQuantity(int rowIndex, int command, int quantity, ArmyListModelChange changes) {
 		setRowCommandQuantity(rowIndex, command, quantity);
+		changes.changed(true);
 	}
 
 	//--------------------------------------------------------------------------
@@ -382,7 +407,7 @@ public class ArmyListDBMModel {
 		List<NameValuePair> adjustmentTexts = mCosts.getAdjustments(drillName, typeName, gradeName);
 		adjustmentTexts.add(0, new NameValuePair("", ""));	// not compulsory
 		String adj = row.mAdjustment;
-		if (!adj.isEmpty()) {
+		if (adj != null && !adj.isEmpty()) {
 			boolean found = false;
 			for (NameValuePair pair : adjustmentTexts) {
 				if (pair.getName().equals(adj)) found = true;				
@@ -390,6 +415,7 @@ public class ArmyListDBMModel {
 			if (!found) adj = "";
 		}
 		changes.setRowFieldList(ArmyListConstants.ROW_ADJ, rowIndex, adjustmentTexts, adj);
+		changes.changed(true);
 	}
 
 	//--------------------------------------------------------------------------
@@ -416,6 +442,7 @@ public class ArmyListDBMModel {
 		changes.setRowFieldList(ArmyListConstants.ROW_TYPE, rowIndex, types, typeName);
 		refreshAdjustments(rowIndex, changes);
 		recalcTotals();
+		changes.changed(true);
 	}
 
 	//--------------------------------------------------------------------------
@@ -452,6 +479,7 @@ public class ArmyListDBMModel {
 		changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rowIndex, grades, grade);
 		refreshAdjustments(rowIndex, changes);
 		recalcTotals();
+		changes.changed(true);
 	}
 
 	//--------------------------------------------------------------------------
@@ -480,6 +508,7 @@ public class ArmyListDBMModel {
 		setRowGrade(rowIndex, grade);
 		refreshAdjustments(rowIndex, changes);
 		recalcTotals();
+		changes.changed(true);
 	}
 
 	//--------------------------------------------------------------------------
@@ -506,6 +535,7 @@ public class ArmyListDBMModel {
 	 * @param adjustment The adjustment e.g. "Ally general, Chariot". */
 	public void setRowAdjustment(int rowIndex, String adjustment, ArmyListModelChange changes) {
 		setRowAdjustment(rowIndex, adjustment);
+		changes.changed(true);
 	}
 
 	//--------------------------------------------------------------------------
@@ -676,12 +706,14 @@ public class ArmyListDBMModel {
 	    Path pth = Paths.get(path);
 	    String content = getAsXML();
 	    Files.write(pth, content.getBytes());
+	    mChanged = false;
 	}
 
 	//--------------------------------------------------------------------------
 	public void saveToFile() throws IOException, XMLStreamException {
 	    String content = getAsXML();
 	    Files.write(mLastFileUsed, content.getBytes());
+	    mChanged = false;
 	}
 
 	//--------------------------------------------------------------------------
@@ -919,5 +951,16 @@ public class ArmyListDBMModel {
 		}
 		recalcTotals();
 		updateAllTotals(changes);
+	}
+
+	//--------------------------------------------------------------------------
+	private void setChanged(ArmyListModelChange change) {
+		mChanged = true;
+		change.changed(true);
+	}
+
+	//--------------------------------------------------------------------------
+	public boolean getChanged() {
+		return(mChanged);
 	}
 }

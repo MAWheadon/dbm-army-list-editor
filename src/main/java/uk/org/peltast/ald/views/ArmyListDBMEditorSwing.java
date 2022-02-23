@@ -2,7 +2,6 @@ package uk.org.peltast.ald.views;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -86,6 +85,7 @@ public class ArmyListDBMEditorSwing {
 	private WTable mTable = new WTable(14);
 	private final Changes mChanges = new Changes();
 	private ArmyIndexModelChange mIndexChanges;
+	private boolean mSetupPhase = true;
 	
 	// Army list header fields
 	private JComboBox<String> mCbBooks = new JComboBox<>();
@@ -115,7 +115,11 @@ public class ArmyListDBMEditorSwing {
 	private JTextField mTfCmd2Bp = new JTextField("");
 	private JTextField mTfCmd3Bp = new JTextField("");
 	private JTextField mTfCmd4Bp = new JTextField("");
-	
+
+	// army action buttons
+	JButton mBtnSave= new JButton("Save");
+	JButton mBtnReload = new JButton("Reload");
+
 	// army list action buttons.
 	JButton mBtnAdd = new JButton("Add");
 	JButton mBtnDelete = new JButton("Delete");
@@ -145,26 +149,27 @@ public class ArmyListDBMEditorSwing {
 		mPnlMain.setName(armyId);
 		
 		mModel.getWholeArmy(mChanges);
+		mSetupPhase = false;
 	}
 
 	//--------------------------------------------------------------------------
 	private JPanel setupArmyActionButtons() {
 		JButton btnClose = new JButton("Close");
-		JButton btnSave= new JButton("Save");
-		JButton btnReload = new JButton("Reload");
 		JButton btnPrint = new JButton("Print ...");
 		JButton btnExport = new JButton("Export to txt ...");
 		JPanel pnl = new JPanel();
-		pnl.add(btnSave);
-		pnl.add(btnReload);
+		pnl.add(mBtnSave);
+		pnl.add(mBtnReload);
 		pnl.add(btnClose);
 		pnl.add(btnPrint);
 		pnl.add(btnExport);
 		btnClose.addActionListener(this::doButtonClose);
-		btnSave.addActionListener(this::doButtonSave);
-		btnReload.addActionListener(this::doButtonReload);
+		mBtnSave.addActionListener(this::doButtonSave);
+		mBtnReload.addActionListener(this::doButtonReload);
 		btnPrint.addActionListener(this::doButtonPrint);
 		btnExport.addActionListener(e -> doButtonExportToText());
+		mBtnSave.setEnabled(false);
+		mBtnReload.setEnabled(false);
 		return(pnl);
 	}
 
@@ -176,7 +181,11 @@ public class ArmyListDBMEditorSwing {
 			if (mIndexChanges != null) {
 				mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_BOOK, mCbBooks.getSelectedItem().toString());
 			}
-			mModel.setArmyBook(mCbBooks.getSelectedItem().toString());
+			if (mSetupPhase) {
+				mModel.setArmyBook(mCbBooks.getSelectedItem().toString());
+			} else {
+				mModel.setArmyBook(mCbBooks.getSelectedItem().toString(), mChanges);
+			}
 		});
 
 		mArmyYearDoc = mTfYear.getDocument();
@@ -185,7 +194,11 @@ public class ArmyListDBMEditorSwing {
 				if (mIndexChanges != null) {
 					mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_YEAR, mTfYear.getText());
 				}
-				mModel.setArmyYear(mTfYear.getText());
+				if (mSetupPhase) {
+					mModel.setArmyYear(mTfYear.getText());
+				} else {
+					mModel.setArmyYear(mTfYear.getText(), mChanges);
+				}
 			}
 			@Override
 			public void changedUpdate(DocumentEvent e) { change(); }
@@ -201,7 +214,11 @@ public class ArmyListDBMEditorSwing {
 				if (mIndexChanges != null) {
 					mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_NAME, mTfDescription.getText());
 				}
-				mModel.setArmyName(mTfDescription.getText());
+				if (mSetupPhase) {
+					mModel.setArmyName(mTfDescription.getText());
+				} else {
+					mModel.setArmyName(mTfDescription.getText(), mChanges);
+				}
 			}
 			@Override
 			public void changedUpdate(DocumentEvent e) { change(); }
@@ -494,6 +511,12 @@ public class ArmyListDBMEditorSwing {
 					cb.addActionListener(listener);
 				}
 			}
+		}
+
+		@Override
+		public void changed(boolean changed) {
+			mBtnSave.setEnabled(changed);
+			mBtnReload.setEnabled(changed);
 		}
 	}
 
