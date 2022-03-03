@@ -111,7 +111,7 @@ public class WTable {
 		for (int rr=0; rr<nbrBodyRows; rr++) {
 			GroupLayout.ParallelGroup pg = groupLayout.createParallelGroup(Alignment.BASELINE);
 			for (JComponent comp : mBodyComponents.get(rr)) {
-				pg.addComponent(comp);
+				pg.addComponent(comp, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE);	// to stop jComboBox with other than String expanding to fill space
 			}	// for
 			vGroup.addGroup(pg);
 		}

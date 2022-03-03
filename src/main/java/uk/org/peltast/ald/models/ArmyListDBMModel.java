@@ -15,7 +15,6 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -212,6 +211,16 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	private void updateAllLineCosts(ArmyListModelChange changes) {
+		int sz = mRows.size();
+		for (int rowIndex=0; rowIndex<sz; rowIndex++) {
+			Row row = mRows.get(rowIndex);
+			changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
+			changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
+		}
+	}
+
+	//--------------------------------------------------------------------------
 	/** Adds a blank row.
 	 * @return The index of the row just added. */
 	public int addRow() {
@@ -367,6 +376,44 @@ public class ArmyListDBMModel {
 	 * @param quantity The number of elements. */
 	public void setRowCommandQuantity(int rowIndex, int command, int quantity, ArmyListModelChange changes) {
 		setRowCommandQuantity(rowIndex, command, quantity);
+		recalcTotals();
+		final ArmyListConstants bp;
+		final ArmyListConstants cost;
+		final ArmyListConstants els;
+		final ArmyListConstants equiv;
+		switch (command) {
+		case 1:
+			bp = ArmyListConstants.CMD1_BP;
+			cost = ArmyListConstants.CMD1_COST;
+			els = ArmyListConstants.CMD1_EL_COUNT;
+			equiv = ArmyListConstants.CMD1_EQUIV;
+			break;
+		case 2:
+			bp = ArmyListConstants.CMD2_BP;
+			cost = ArmyListConstants.CMD2_COST;
+			els = ArmyListConstants.CMD2_EL_COUNT;
+			equiv = ArmyListConstants.CMD2_EQUIV;
+			break;
+		case 3:
+			bp = ArmyListConstants.CMD3_BP;
+			cost = ArmyListConstants.CMD3_COST;
+			els = ArmyListConstants.CMD3_EL_COUNT;
+			equiv = ArmyListConstants.CMD3_EQUIV;
+			break;
+		case 4:
+			bp = ArmyListConstants.CMD4_BP;
+			cost = ArmyListConstants.CMD4_COST;
+			els = ArmyListConstants.CMD4_EL_COUNT;
+			equiv = ArmyListConstants.CMD4_EQUIV;
+			break;
+			default : 
+				log.warn("Unknown command {}", command);
+				return;
+		}
+		changes.setField(bp, Float.toString(mCommandTotals[command-1].mBreakPoint));
+		changes.setField(cost, Float.toString(mCommandTotals[command-1].mCost));
+		changes.setField(els, Integer.toString(mCommandTotals[command-1].mElements));
+		changes.setField(equiv, Float.toString(mCommandTotals[command-1].mEquivalents));
 		changes.changed(true);
 	}
 
@@ -442,6 +489,8 @@ public class ArmyListDBMModel {
 		changes.setRowFieldList(ArmyListConstants.ROW_TYPE, rowIndex, types, typeName);
 		refreshAdjustments(rowIndex, changes);
 		recalcTotals();
+		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
+		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 		changes.changed(true);
 	}
 
@@ -479,6 +528,8 @@ public class ArmyListDBMModel {
 		changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rowIndex, grades, grade);
 		refreshAdjustments(rowIndex, changes);
 		recalcTotals();
+		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
+		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 		changes.changed(true);
 	}
 
@@ -508,6 +559,9 @@ public class ArmyListDBMModel {
 		setRowGrade(rowIndex, grade);
 		refreshAdjustments(rowIndex, changes);
 		recalcTotals();
+		Row row = mRows.get(rowIndex);
+		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
+		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 		changes.changed(true);
 	}
 
@@ -535,6 +589,10 @@ public class ArmyListDBMModel {
 	 * @param adjustment The adjustment e.g. "Ally general, Chariot". */
 	public void setRowAdjustment(int rowIndex, String adjustment, ArmyListModelChange changes) {
 		setRowAdjustment(rowIndex, adjustment);
+		recalcTotals();
+		Row row = mRows.get(rowIndex);
+		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
+		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 		changes.changed(true);
 	}
 
@@ -937,9 +995,14 @@ public class ArmyListDBMModel {
 			changes.setRowFieldList(ArmyListConstants.ROW_DRILL, rr, mCosts.getDrillList(), row.mDrillName);
 			if (row.mDrillName != null && !row.mDrillName.isEmpty()) {
 				changes.setRowFieldList(ArmyListConstants.ROW_TYPE, rr, mCosts.getTypes(row.mDrillName), row.mTypeName);
-			}
-			if (row.mDrillName != null && !row.mDrillName.isEmpty() && row.mTypeName != null && !row.mTypeName.isEmpty()) {
-				changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rr, mCosts.getTroopGradeList(row.mDrillName, row.mTypeName), row.mGradeName);
+				if (row.mTypeName != null && !row.mTypeName.isEmpty()) {
+					changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rr, mCosts.getTroopGradeList(row.mDrillName, row.mTypeName), row.mGradeName);
+					if (row.mGradeName != null && !row.mGradeName.isEmpty()) {
+						List<NameValuePair> adjs = mCosts.getAdjustments(row.mDrillName, row.mTypeName, row.mGradeName);
+						adjs.add(0, new NameValuePair("", ""));
+						changes.setRowFieldList(ArmyListConstants.ROW_ADJ, rr, adjs, row.mAdjustment);
+					}
+				}
 			}
 			changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rr, row.mCostPerElement);
 			changes.setRowField(ArmyListConstants.ROW_LINE_COST, rr, row.mTotalRowCost);
@@ -950,6 +1013,7 @@ public class ArmyListDBMModel {
 			changes.setRowField(ArmyListConstants.ROW_UNUSED, rr, row.mUnusedElements);
 		}
 		recalcTotals();
+		updateAllLineCosts(changes);
 		updateAllTotals(changes);
 	}
 

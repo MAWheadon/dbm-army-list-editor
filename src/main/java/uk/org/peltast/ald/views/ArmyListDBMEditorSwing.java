@@ -2,9 +2,11 @@ package uk.org.peltast.ald.views;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.LayoutManager;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -23,6 +25,7 @@ import java.util.List;
 
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
+import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -373,6 +376,7 @@ public class ArmyListDBMEditorSwing {
 
 		@Override
 		public void setField(ArmyListConstants field, String value) {
+		log.info("Field is {} value is {}", field, value);
 			switch (field) {
 				case ARMY_BOOK : mCbBooks.setSelectedItem(value); break;
 				case ARMY_NAME : mTfDescription.setText(value); break;
@@ -616,7 +620,7 @@ public class ArmyListDBMEditorSwing {
 				String totalEl = mTable.getValue(WTableSection.FOOTER,0,ColNo.CMD1.ordinal()-1+cmd);
 				String eq = mTable.getValue(WTableSection.FOOTER,1,ColNo.CMD1.ordinal()-1+cmd);
 				String breakPoint = mTable.getValue(WTableSection.FOOTER,2,ColNo.CMD1.ordinal()-1+cmd);
-				String str = MessageFormat.format("{0} total elements,  break point is {1}",totalEl,breakPoint);
+				String str = MessageFormat.format("{0} total elements, Equivalents is {1}, break point is {2}", totalEl, eq, breakPoint);
 				yy += c_line_height / 2;
 				g2d.drawString(str,leftMargin,yy);
 			}
@@ -754,8 +758,9 @@ public class ArmyListDBMEditorSwing {
     class NameValuePairRenderer extends BasicComboBoxRenderer {
     	@Override
         public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-
+    		Component comp = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+    		log.info("Component is {}", comp);
+    		
             if (value != null) {
             	NameValuePair pair = (NameValuePair)value;
                 setText(pair.getValue());
@@ -771,7 +776,6 @@ public class ArmyListDBMEditorSwing {
 		
 		SpinnerNumberModel snmQty = new SpinnerNumberModel(1,1,200,1);
 		JSpinner spnrQty = new JSpinner(snmQty);
-		spnrQty.setValue(1);
 		spnrQty.setName(ArmyListConstants.ROW_QTY.toString());
 		spnrQty.addChangeListener(e -> {
 			WTableLocation loc = mTable.getLocation(spnrQty);
@@ -816,10 +820,11 @@ public class ArmyListDBMEditorSwing {
 
 		JComboBox<NameValuePair> cbAdj = new JComboBox<>();
 		cbAdj.setName(ArmyListConstants.ROW_ADJ.toString());
-		cbAdj.setRenderer(new NameValuePairRenderer());
+		//cbAdj.setRenderer(new NameValuePairRenderer());
 		cbAdj.addActionListener(e -> {
 			WTableLocation loc = mTable.getLocation(cbAdj);
-			mModel.setRowAdjustment(loc.getRow(), cbAdj.getSelectedItem().toString(), mChanges);
+			NameValuePair pair  = (NameValuePair)cbAdj.getSelectedItem();
+			mModel.setRowAdjustment(loc.getRow(), pair.getName(), mChanges);
 		});
 
 		JTextField tfCostEach = new JTextField(4);
@@ -873,6 +878,8 @@ public class ArmyListDBMEditorSwing {
 				spnrCmd1, spnrCmd2, spnrCmd3, spnrCmd4,
 				tfElementsUnused};
 		mTable.addRow(WTableSection.BODY, arr);
+
+		spnrQty.setValue(1);
 
 		JComponent editor = spnrQty.getEditor();
 		JFormattedTextField field = (JFormattedTextField) editor.getComponent(0);

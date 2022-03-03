@@ -26,10 +26,10 @@
 		</adjustments>
 		<types>
 			<type name="Kn">
-				<troop grade="S" ap="15" eq="1" adjs="ch,rr,gen,gen1,gen2,ally" />
-				<troop grade="O" ap="12" eq="1" adjs="ch,rr,gen,gen1,gen2,ally" />
-				<troop grade="I" ap="10" eq="1" adjs="rr,gen,gen1,gen2,ally" />
-				<troop grade="F" ap="11" eq="1" adjs="gen,gen1,gen2,ally" />
+				<troop grade="S" ap="15" eq="1" adjs="ch,rr,gen,gen1,gen2,chgen,chgen1,chgen2,ally" />
+				<troop grade="O" ap="12" eq="1" adjs="ch,rr,gen,gen1,gen2,chgen,chgen1,chgen2,ally" />
+				<troop grade="I" ap="10" eq="1" adjs="ch,rr,gen,gen1,gen2,chgen,chgen1,chgen2,ally" />
+				<troop grade="F" ap="11" eq="1" adjs="ch,gen,gen1,gen2,chgen,chgen1,chgen2,ally" />
 				<troop grade="X" ap="13" eq="1" adjs="gen,gen1,gen2,ally" />
 			</type>
 			<type name="Cv">
