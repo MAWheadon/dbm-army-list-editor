@@ -158,6 +158,7 @@ public class WTable {
 	//--------------------------------------------------------------------------
 	/** Assume the body. */
 	public void removeAllRows() {
+		log.info("About to remove all rows");
 		mBodyComponents.clear();
 		rebuildLayout();
 	}

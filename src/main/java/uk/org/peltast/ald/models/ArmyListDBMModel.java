@@ -258,15 +258,29 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	public void moveRowUp(int index) {
-		Row row = mRows.remove(index);
-		mRows.add(index-1,row);
+	public void moveRowUp(int rowIndex) {
+		Row row = mRows.remove(rowIndex);
+		mRows.add(rowIndex-1,row);
 	}
 
 	//--------------------------------------------------------------------------
-	public void moveRowDown(int index) {
-		Row row = mRows.remove(index);
-		mRows.add(index+1,row);
+	public void moveRowUp(int rowIndex, ArmyListModelChange change) {
+		Row row = mRows.remove(rowIndex);
+		mRows.add(rowIndex-1,row);
+		change.moveRowUp(rowIndex);
+	}
+
+	//--------------------------------------------------------------------------
+	public void moveRowDown(int rowIndex) {
+		Row row = mRows.remove(rowIndex);
+		mRows.add(rowIndex+1,row);
+	}
+
+	//--------------------------------------------------------------------------
+	public void moveRowDown(int rowIndex, ArmyListModelChange change) {
+		Row row = mRows.remove(rowIndex);
+		mRows.add(rowIndex+1,row);
+		change.moveRowDown(rowIndex);
 	}
 
 	//--------------------------------------------------------------------------
@@ -346,6 +360,7 @@ public class ArmyListDBMModel {
 		changes.setField(ArmyListConstants.ARMY_EL_COUNT, Integer.toString(mArmyTotals.mElements));
 		changes.setField(ArmyListConstants.ARMY_POINTS, Float.toString(mArmyTotals.mCost));
 		changes.setField(ArmyListConstants.ARMY_EL_EQUIV, Float.toString(mArmyTotals.mEquivalents));
+
 		changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, getRowUnusedQuantity(rowIndex));
 		changes.changed(true);
 	}
@@ -414,6 +429,8 @@ public class ArmyListDBMModel {
 		changes.setField(cost, Float.toString(mCommandTotals[command-1].mCost));
 		changes.setField(els, Integer.toString(mCommandTotals[command-1].mElements));
 		changes.setField(equiv, Float.toString(mCommandTotals[command-1].mEquivalents));
+
+		changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, getRowUnusedQuantity(rowIndex));
 		changes.changed(true);
 	}
 
@@ -759,19 +776,27 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	public void saveToFile(String dataDir) throws IOException, XMLStreamException {
-		String path = makeFileName(dataDir, mArmyId);
-	    Path pth = Paths.get(path);
+	public void reloadFromFile(ArmyListModelChange changes) throws IOException {
+		loadFromFile();
+		getWholeArmy(changes);
+	}
+
+	//--------------------------------------------------------------------------
+	public void save() throws IOException, XMLStreamException {
+	    if (mLastFileUsed == null) {
+			String dataDir = ArmyListModelUtils.getDataPath();
+			String path = makeFileName(dataDir, mArmyId);
+		    mLastFileUsed = Paths.get(path);
+	    }
 	    String content = getAsXML();
-	    Files.write(pth, content.getBytes());
+	    Files.write(mLastFileUsed, content.getBytes());
 	    mChanged = false;
 	}
 
 	//--------------------------------------------------------------------------
-	public void saveToFile() throws IOException, XMLStreamException {
-	    String content = getAsXML();
-	    Files.write(mLastFileUsed, content.getBytes());
-	    mChanged = false;
+	public void save(ArmyListModelChange change) throws IOException, XMLStreamException {
+		save();
+		change.changed(false);
 	}
 
 	//--------------------------------------------------------------------------
@@ -983,6 +1008,7 @@ public class ArmyListDBMModel {
 	 * all the changes for the whole army from scratch.
 	 * @param changes To call the necessary change methods. */
 	public void getWholeArmy(ArmyListModelChange changes) {
+		changes.clear();
 		changes.setField(ArmyListConstants.ARMY_NAME, mArmyName);
 		changes.setField(ArmyListConstants.ARMY_BOOK, mArmyBook);
 		changes.setField(ArmyListConstants.ARMY_YEAR, mArmyYear);
@@ -1015,6 +1041,7 @@ public class ArmyListDBMModel {
 		recalcTotals();
 		updateAllLineCosts(changes);
 		updateAllTotals(changes);
+		changes.changed(false);
 	}
 
 	//--------------------------------------------------------------------------

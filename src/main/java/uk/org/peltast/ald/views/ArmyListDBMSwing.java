@@ -481,6 +481,10 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 				mArmyListIndex.updateEntryPoints(armyId, value);
 				mChanged = true;
 				break;
+			case CLOSE :
+				tabIndex = getTabIndex(armyId);
+				mTabPane.remove(tabIndex);
+				break;
 			default	:
 				log.warn("Unknown index field {}", field);
 		}

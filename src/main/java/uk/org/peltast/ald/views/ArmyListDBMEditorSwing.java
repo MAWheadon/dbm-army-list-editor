@@ -2,11 +2,9 @@ package uk.org.peltast.ald.views;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.LayoutManager;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -25,7 +23,6 @@ import java.util.List;
 
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
-import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -232,11 +229,11 @@ public class ArmyListDBMEditorSwing {
 		});
 		mTfCostFile.setEditable(false);
 		pnl.add(mCbBooks);
-		pnl.add(new JLabel("        Army"));
+		pnl.add(new JLabel("     Army"));
 		pnl.add(mTfDescription);
-		pnl.add(new JLabel("        Year"));
+		pnl.add(new JLabel("     Year"));
 		pnl.add(mTfYear);
-		pnl.add(new JLabel("        Cost version"));
+		pnl.add(new JLabel("     Cost version"));
 		pnl.add(mTfCostFile);
 		try {
 			ArmyListCosts costs = mModel.getArmyCosts();
@@ -254,21 +251,10 @@ public class ArmyListDBMEditorSwing {
 
 	//--------------------------------------------------------------------------
 	private JPanel setupArmyButtons() {
-		mBtnAdd.addActionListener(this::doButtonAdd);
+		mBtnAdd.addActionListener(e -> mModel.addRow(mChanges));
 		mBtnDelete.addActionListener(this::doButtonDelete);
 		mBtnMoveUp.addActionListener(this::doButtonMoveUp);
-		mBtnMoveDown.addActionListener(e -> {
-			int rowCount = mTable.getNumberOfRows(WTableSection.BODY);
-			// move rows down the bottom up so checked rows don't trip over each other.
-			for (int row_nbr=rowCount-1; row_nbr>=0; row_nbr--) {
-				String chk = mTable.getValue(WTableSection.BODY,row_nbr,0);
-				if (chk.length() > 0 && row_nbr < rowCount-1) {
-					mTable.moveRowDown(row_nbr);
-					mModel.moveRowDown(row_nbr);
-				}
-			}	// for - each row
-			enableDeleteAndMoveButtons();	// there won't be any checked rows now
-		});
+		mBtnMoveDown.addActionListener(this::doButtonMoveDown);
 		JPanel pnl = new JPanel();
 		pnl.add(mBtnAdd);
 		pnl.add(mBtnDelete);
@@ -630,11 +616,6 @@ public class ArmyListDBMEditorSwing {
 	}
 
 	//--------------------------------------------------------------------------
-	private void doButtonAdd(ActionEvent ae) {
-		mModel.addRow(mChanges);
-	}
-
-	//--------------------------------------------------------------------------
 	/** Tells the model which rows have been deleted.
 	 * @param ae */
 	private void doButtonDelete(ActionEvent ae) {
@@ -646,37 +627,34 @@ public class ArmyListDBMEditorSwing {
 				mModel.deleteRow(rr, mChanges);
 			}
 		}
+		enableDeleteAndMoveButtons();
 	}
 
 	//--------------------------------------------------------------------------
 	private void doButtonClose(ActionEvent ae) {
+		boolean ok = true;
+		if (mBtnSave.isEnabled()) {
+			ok = confirmMessage("The list has unsaved changes, do you want to exit and loose the changes?");
+		}
+		if (ok) {
+			String armyId = mModel.getArmyId();
+			mIndexChanges.change(armyId, ArmyListConstants.CLOSE, null);
+		}
 	}
 
 	//--------------------------------------------------------------------------
 	private void doButtonSave(ActionEvent ae) {
-		if (mModel.isYetToBeSaved()) {
-			String dataDir = ArmyListModelUtils.getDataPath();
-			try {
-				mModel.saveToFile(dataDir);
-			} catch (IOException | XMLStreamException e) {
-				errorMessage("Saving army list failed because of : " + e.toString());
-			}
-		} else {
-			try {
-				mModel.saveToFile();
-			} catch (IOException | XMLStreamException e) {
-				errorMessage("Saving army list failed because of : " + e.toString());
-			}
+		try {
+			mModel.save(mChanges);
+		} catch (IOException | XMLStreamException e) {
+			errorMessage("Saving army list failed because of : " + e.toString());
 		}
 	}
 
 	//--------------------------------------------------------------------------
 	private void doButtonReload(ActionEvent ae) {
-		if (mModel.isYetToBeSaved()) {
-			errorMessage("Cannot reload as army list has yet to be saved");
-		}
 		try {
-			mModel.loadFromFile();
+			mModel.reloadFromFile(mChanges);
 		} catch (IOException e) {
 			errorMessage("Reloading army list failed because of : " + e.toString());
 		}
@@ -704,10 +682,27 @@ public class ArmyListDBMEditorSwing {
 
 	//--------------------------------------------------------------------------
 	private void doButtonMoveDown(ActionEvent ae) {
+		int rowCount = mTable.getNumberOfRows(WTableSection.BODY);
+		// always best to move down list entries backwards
+		for (int rr=rowCount-1; rr>=0; rr--) {
+			String tick = mTable.getValue(WTableSection.BODY, rr, 0);
+			if (tick.equals("Y")) {
+				mModel.moveRowDown(rr, mChanges);
+			}
+		}
+		enableDeleteAndMoveButtons();
 	}
 
 	//--------------------------------------------------------------------------
 	private void doButtonMoveUp(ActionEvent ae) {
+		int rowCount = mTable.getNumberOfRows(WTableSection.BODY);
+		for (int rr=0; rr<rowCount; rr++) {
+			String tick = mTable.getValue(WTableSection.BODY, rr, 0);
+			if (tick.equals("Y")) {
+				mModel.moveRowUp(rr, mChanges);
+			}
+		}
+		enableDeleteAndMoveButtons();
 	}
 
 	//--------------------------------------------------------------------------
@@ -892,31 +887,6 @@ public class ArmyListDBMEditorSwing {
 	}
 
 	//--------------------------------------------------------------------------
-	private class ButtonMoveUpListener implements ActionListener {
-		@Override
-		public void actionPerformed(ActionEvent ae) {
-			int row_count = mTable.getNumberOfRows(WTableSection.BODY);
-			for (int row_nbr=0; row_nbr<row_count; row_nbr++) {
-				String chk = mTable.getValue(WTableSection.BODY,row_nbr,0);
-				if (chk.length() > 0) {
-					if (row_nbr > 0) {
-						mTable.moveRowUp(row_nbr);
-						mModel.moveRowUp(row_nbr);
-					}	// if
-				}	// if
-			}	// for - each row
-			enableDeleteAndMoveButtons();	// there won't be any checked rows now
-		}	// actionPerformed
-	}	// ButtonMoveUpListener
-
-	//--------------------------------------------------------------------------
-	private class ButtonMoveDownListener implements ActionListener {
-		@Override
-		public void actionPerformed(ActionEvent ae) {
-		}	// actionPerformed
-	}
-
-	//--------------------------------------------------------------------------
 	private boolean confirmMessage(String msg) {
 		int result = JOptionPane.showConfirmDialog(mPnlMain, msg);
 		if (result == JOptionPane.YES_OPTION) {
@@ -928,11 +898,6 @@ public class ArmyListDBMEditorSwing {
 	//--------------------------------------------------------------------------
 	private void errorMessage(String msg) {
 		JOptionPane.showMessageDialog(mPnlMain, msg);
-	}
-
-	//--------------------------------------------------------------------------
-	ArmyListDBMModel getModel() {
-		return(mModel);
 	}
 
 	//--------------------------------------------------------------------------
