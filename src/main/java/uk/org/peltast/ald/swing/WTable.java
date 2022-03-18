@@ -200,6 +200,9 @@ public class WTable {
 	public String getValue(WTableSection section, int row, int column) {
 		JComponent jcomp = getComponent(section,row,column);
 		String val = getFieldAsText(jcomp);
+		if (val.endsWith(".0")) {
+			val = val.substring(0,val.length()-2);
+		}
 		return(val);
 	}
 

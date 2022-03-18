@@ -412,6 +412,12 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 	    	mHidden.set(rowIndex,value);
 	    }
 
+		@Override
+		public void removeRow(int row) {
+			super.removeRow(row);
+			mHidden.remove(row);
+		}
+
 	    @Override
 	    public boolean isCellEditable(int row, int column) {
 	       return false;	// all cells false

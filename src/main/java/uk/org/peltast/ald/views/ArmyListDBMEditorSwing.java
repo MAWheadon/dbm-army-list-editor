@@ -531,10 +531,10 @@ public class ArmyListDBMEditorSwing {
 			str = (String)mCbBooks.getSelectedItem();
 			g2d.drawString(str,c_left_margin_1+275,100);
 			g2d.drawLine(0,105,2000,105);
-			String totalCost = mTable.getValue(WTableSection.FOOTER,0,ColNo.TOTAL.ordinal());
-			String totalQty = mTable.getValue(WTableSection.FOOTER,0,ColNo.QTY.ordinal());
-			String totalElEq = mTable.getValue(WTableSection.FOOTER,1,ColNo.QTY.ordinal());
-			String halfArmy = mTable.getValue(WTableSection.FOOTER,2,ColNo.QTY.ordinal());
+			String totalCost = mTable.getValue(WTableSection.FOOTER,0,ColNo.QTY.ordinal());
+			String totalQty = mTable.getValue(WTableSection.FOOTER,1,ColNo.QTY.ordinal());
+			String totalElEq = mTable.getValue(WTableSection.FOOTER,2,ColNo.QTY.ordinal());
+			String halfArmy = mTable.getValue(WTableSection.FOOTER,3,ColNo.QTY.ordinal());
 			str = MessageFormat.format("{0} total cost, {1} total elements, {2} equivalents, half the army is {3} elements",totalCost,totalQty,totalElEq,halfArmy);
 			g2d.setFont(fontPlain);
 			g2d.drawString(str,c_left_margin_1,120);
@@ -603,10 +603,11 @@ public class ArmyListDBMEditorSwing {
 				yy += c_line_height;
 			}	// for - each row
 			if (cmdHeadingPrinted) {
-				String totalEl = mTable.getValue(WTableSection.FOOTER,0,ColNo.CMD1.ordinal()-1+cmd);
-				String eq = mTable.getValue(WTableSection.FOOTER,1,ColNo.CMD1.ordinal()-1+cmd);
-				String breakPoint = mTable.getValue(WTableSection.FOOTER,2,ColNo.CMD1.ordinal()-1+cmd);
-				String str = MessageFormat.format("{0} total elements, Equivalents is {1}, break point is {2}", totalEl, eq, breakPoint);
+				String points = mTable.getValue(WTableSection.FOOTER,0,ColNo.CMD1.ordinal()-1+cmd);
+				String totalEl = mTable.getValue(WTableSection.FOOTER,1,ColNo.CMD1.ordinal()-1+cmd);
+				String eq = mTable.getValue(WTableSection.FOOTER,2,ColNo.CMD1.ordinal()-1+cmd);
+				String breakPoint = mTable.getValue(WTableSection.FOOTER,3,ColNo.CMD1.ordinal()-1+cmd);
+				String str = MessageFormat.format("{0} points, {1} elements, {2} equivalents, {3} break", points, totalEl, eq, breakPoint);
 				yy += c_line_height / 2;
 				g2d.drawString(str,leftMargin,yy);
 			}
