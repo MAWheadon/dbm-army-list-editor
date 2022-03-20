@@ -56,7 +56,6 @@ import uk.org.peltast.ald.models.ArmyListConstants;
 import uk.org.peltast.ald.models.ArmyListCosts;
 import uk.org.peltast.ald.models.ArmyListDBMModel;
 import uk.org.peltast.ald.models.ArmyListModelChange;
-import uk.org.peltast.ald.models.ArmyListModelUtils;
 import uk.org.peltast.ald.models.NameValuePair;
 import uk.org.peltast.ald.swing.WTable;
 import uk.org.peltast.ald.swing.WTable.WTableLocation;
@@ -178,13 +177,14 @@ public class ArmyListDBMEditorSwing {
 		JPanel pnl = new JPanel();
 		pnl.add(new JLabel("Book"));
 		mCbBooks.addActionListener(e -> {
+			final String book = mCbBooks.getSelectedItem().toString();
 			if (mIndexChanges != null) {
-				mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_BOOK, mCbBooks.getSelectedItem().toString());
+				mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_BOOK, book);
+				log.info("Index change: book is {}", book);
 			}
-			if (mSetupPhase) {
-				mModel.setArmyBook(mCbBooks.getSelectedItem().toString());
-			} else {
-				mModel.setArmyBook(mCbBooks.getSelectedItem().toString(), mChanges);
+			if (!mSetupPhase) {
+				mModel.setArmyBook(book, mChanges);
+				log.info("After setup phase: book is {}", book);
 			}
 		});
 
@@ -238,10 +238,12 @@ public class ArmyListDBMEditorSwing {
 		try {
 			ArmyListCosts costs = mModel.getArmyCosts();
 			String[] books = mModel.getArmyCosts().getBooks();
+			log.info("About to remove all book items");
 			mCbBooks.removeAllItems();
 			for (String book : books) {
 				mCbBooks.addItem(book);
 			}
+			log.info("Added all book items");
 			mTfCostFile.setText(costs.getVersion());
 		} catch (ParserConfigurationException | SAXException | IOException e1) {
 			log.warn("Cannot get costs");
@@ -364,7 +366,14 @@ public class ArmyListDBMEditorSwing {
 		public void setField(ArmyListConstants field, String value) {
 		log.info("Field is {} value is {}", field, value);
 			switch (field) {
-				case ARMY_BOOK : mCbBooks.setSelectedItem(value); break;
+				case ARMY_BOOK :
+					int itemCount = mCbBooks.getItemCount();
+					for (int ii=0; ii<itemCount; ii++) {
+						String bb = mCbBooks.getItemAt(ii);
+						log.info("Book at index {} is {}", ii, bb);
+					}
+					mCbBooks.setSelectedItem(value);
+					break;
 				case ARMY_NAME : mTfDescription.setText(value); break;
 				case ARMY_YEAR: mTfYear.setText(value); break;
 
@@ -880,7 +889,8 @@ public class ArmyListDBMEditorSwing {
 				tfElementsUnused};
 		mTable.addRow(WTableSection.BODY, arr);
 
-		spnrQty.setValue(1);
+		spnrQty.setValue(0);
+		spnrQty.setValue(1);	// to force a model change
 
 		JComponent editor = spnrQty.getEditor();
 		JFormattedTextField field = (JFormattedTextField) editor.getComponent(0);

@@ -183,11 +183,16 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
-	private void updateAllTotals(ArmyListModelChange changes) {
+	private void updateArmyTotals(ArmyListModelChange changes) {
 		changes.setField(ArmyListConstants.ARMY_HALF, Float.toString(mArmyTotals.mBreakPoint));
 		changes.setField(ArmyListConstants.ARMY_POINTS, Float.toString(mArmyTotals.mCost));
 		changes.setField(ArmyListConstants.ARMY_EL_COUNT, Integer.toString(mArmyTotals.mElements));
 		changes.setField(ArmyListConstants.ARMY_EL_EQUIV, Float.toString(mArmyTotals.mEquivalents));
+	}
+
+	//--------------------------------------------------------------------------
+	private void updateAllTotals(ArmyListModelChange changes) {
+		updateArmyTotals(changes);
 
 		changes.setField(ArmyListConstants.CMD1_BP, Float.toString(mCommandTotals[0].mBreakPoint));
 		changes.setField(ArmyListConstants.CMD1_COST, Float.toString(mCommandTotals[0].mCost));
@@ -317,12 +322,14 @@ public class ArmyListDBMModel {
 	//--------------------------------------------------------------------------
 	public void setArmyBook(String book) {
 		mArmyBook = book;
+		log.info("Army book is now {}", book);
 	}
 
 	//--------------------------------------------------------------------------
 	public void setArmyBook(String book, ArmyListModelChange change) {
-		mArmyBook = book;
+		setArmyBook(book);
 		setChanged(change);
+		log.info("Changes: Army book is now {}", book);
 	}
 
 	//--------------------------------------------------------------------------
@@ -348,6 +355,7 @@ public class ArmyListDBMModel {
 	public void setRowQuantity(int rowIndex, int quantity) {
 		Row row = mRows.get(rowIndex);
 		row.mQty = quantity;
+		log.info("Row {} quantity is now {}", rowIndex, quantity);
 	}
 
 	//--------------------------------------------------------------------------
@@ -357,9 +365,7 @@ public class ArmyListDBMModel {
 	public void setRowQuantity(int rowIndex, int quantity, ArmyListModelChange changes) {
 		setRowQuantity(rowIndex, quantity);
 		recalcTotals();
-		changes.setField(ArmyListConstants.ARMY_EL_COUNT, Integer.toString(mArmyTotals.mElements));
-		changes.setField(ArmyListConstants.ARMY_POINTS, Float.toString(mArmyTotals.mCost));
-		changes.setField(ArmyListConstants.ARMY_EL_EQUIV, Float.toString(mArmyTotals.mEquivalents));
+		updateArmyTotals(changes);
 
 		int unused = getRowUnusedQuantity(rowIndex);
 		log.info("Unused is {}", unused);
@@ -520,6 +526,7 @@ public class ArmyListDBMModel {
 		recalcTotals();
 		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
 		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
+		updateArmyTotals(changes);
 		changes.changed(true);
 	}
 
@@ -559,6 +566,7 @@ public class ArmyListDBMModel {
 		recalcTotals();
 		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
 		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
+		updateArmyTotals(changes);
 		changes.changed(true);
 	}
 
@@ -591,6 +599,7 @@ public class ArmyListDBMModel {
 		Row row = mRows.get(rowIndex);
 		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
 		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
+		updateArmyTotals(changes);
 		changes.changed(true);
 	}
 
@@ -622,6 +631,7 @@ public class ArmyListDBMModel {
 		Row row = mRows.get(rowIndex);
 		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
 		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
+		updateArmyTotals(changes);
 		changes.changed(true);
 	}
 
@@ -738,6 +748,7 @@ public class ArmyListDBMModel {
 			mArmyName = armyNode.getAttribute(AttributeNames.name.toString());
 			mArmyBook = armyNode.getAttribute(AttributeNames.book.toString());
 			mArmyYear = armyNode.getAttribute(AttributeNames.year.toString());
+			log.info("Id is {}, name is {}, book is {} year is {}", mArmyId, mArmyName, mArmyBook, mArmyYear);
 
 			mRows.clear();
 			NodeList rowNodes = doc.getElementsByTagName(AttributeNames.row.toString());
@@ -1007,6 +1018,7 @@ public class ArmyListDBMModel {
 
 	//--------------------------------------------------------------------------
 	public void clearArmyist() {
+		log.info("Clearing army list");
 		setArmyBook(null);
 		setArmyName(null);
 		setArmyYear(null);
@@ -1023,6 +1035,7 @@ public class ArmyListDBMModel {
 		changes.clear();
 		changes.setField(ArmyListConstants.ARMY_NAME, mArmyName);
 		changes.setField(ArmyListConstants.ARMY_BOOK, mArmyBook);
+		log.info("Book is {}", mArmyBook);
 		changes.setField(ArmyListConstants.ARMY_YEAR, mArmyYear);
 		int rowCount = mRows.size();
 		for (int rr=0; rr<rowCount; rr++) {
