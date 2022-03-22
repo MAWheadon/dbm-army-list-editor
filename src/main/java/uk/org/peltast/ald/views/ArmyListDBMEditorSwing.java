@@ -399,9 +399,13 @@ public class ArmyListDBMEditorSwing {
 
 		@Override
 		public void setRowField(ArmyListConstants field, int row, String value) {
+			log.info("Field is {} String value is {}", field, value);
 			switch (field) {
 				case ROW_DESC:
 					mTable.setValue(WTableSection.BODY, row, 2, value);
+					break;
+				case ROW_UNUSED:
+					mTable.setValue(WTableSection.BODY, row, 13, value);
 					break;
 				default : log.warn("Unknown field {}", field);
 			}
@@ -409,6 +413,7 @@ public class ArmyListDBMEditorSwing {
 
 		@Override
 		public void setRowField(ArmyListConstants field, int row, int nbr) {
+			log.info("Field is {} integer value is {}", field, nbr);
 			switch (field) {
 				case ROW_QTY:
 					mTable.setValue(WTableSection.BODY, row, 1, nbr);

@@ -361,7 +361,13 @@ public class ArmyListDBMModel {
 		changes.setField(ArmyListConstants.ARMY_POINTS, Float.toString(mArmyTotals.mCost));
 		changes.setField(ArmyListConstants.ARMY_EL_EQUIV, Float.toString(mArmyTotals.mEquivalents));
 
-		changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, getRowUnusedQuantity(rowIndex));
+		int unused = getRowUnusedQuantity(rowIndex);
+		log.info("Unused is {}", unused);
+		if (unused == 0) {
+			changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, "");
+		} else {
+			changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, unused);
+		}
 		changes.changed(true);
 	}
 
@@ -430,7 +436,13 @@ public class ArmyListDBMModel {
 		changes.setField(els, Integer.toString(mCommandTotals[command-1].mElements));
 		changes.setField(equiv, Float.toString(mCommandTotals[command-1].mEquivalents));
 
-		changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, getRowUnusedQuantity(rowIndex));
+		int unused = getRowUnusedQuantity(rowIndex);
+		log.info("Unused is {}", unused);
+		if (unused == 0) {
+			changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, "");
+		} else {
+			changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, unused);
+		}
 		changes.changed(true);
 	}
 
@@ -1036,7 +1048,12 @@ public class ArmyListDBMModel {
 			changes.setRowField(ArmyListConstants.ROW_CMD2_QTY, rr, row.mCmdQty[1]);
 			changes.setRowField(ArmyListConstants.ROW_CMD3_QTY, rr, row.mCmdQty[2]);
 			changes.setRowField(ArmyListConstants.ROW_CMD4_QTY, rr, row.mCmdQty[3]);
-			changes.setRowField(ArmyListConstants.ROW_UNUSED, rr, row.mUnusedElements);
+			int unused = row.mUnusedElements;
+			if (unused == 0) {
+				changes.setRowField(ArmyListConstants.ROW_UNUSED, rr, "");
+			} else {
+				changes.setRowField(ArmyListConstants.ROW_UNUSED, rr, unused);
+			}
 		}
 		recalcTotals();
 		updateAllLineCosts(changes);
