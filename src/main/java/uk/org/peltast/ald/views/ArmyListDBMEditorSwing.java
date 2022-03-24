@@ -808,6 +808,7 @@ public class ArmyListDBMEditorSwing {
 		});
 
 		JComboBox<String> cbDrill = new JComboBox<>(mDrills.toArray(new String[0]));
+		cbDrill.setSelectedIndex(-1);	// unselecr
 		cbDrill.setName(ArmyListConstants.ROW_DRILL.toString());
 		cbDrill.addActionListener(e -> {
 			WTableLocation loc = mTable.getLocation(cbDrill);
