@@ -1,4 +1,5 @@
 /*-------------------------------------------------------------------------------
+08/07/2022 MAW setRowQuantity() now calls (new) updateLineCosts().
 -------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.models;
@@ -216,6 +217,8 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	/** Updates all the troop cost and the line cost.
+	 * @param changes */
 	private void updateAllLineCosts(ArmyListModelChange changes) {
 		int sz = mRows.size();
 		for (int rowIndex=0; rowIndex<sz; rowIndex++) {
@@ -223,6 +226,15 @@ public class ArmyListDBMModel {
 			changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
 			changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 		}
+	}
+
+	//--------------------------------------------------------------------------
+	/** Updates the troop cost and the line cost.
+	 * @param changes */
+	private void updateLineCosts(int rowIndex, ArmyListModelChange changes) {
+		Row row = mRows.get(rowIndex);
+		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
+		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 	}
 
 	//--------------------------------------------------------------------------
@@ -374,6 +386,7 @@ public class ArmyListDBMModel {
 		} else {
 			changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, unused);
 		}
+		updateLineCosts(rowIndex, changes);
 		changes.changed(true);
 	}
 
