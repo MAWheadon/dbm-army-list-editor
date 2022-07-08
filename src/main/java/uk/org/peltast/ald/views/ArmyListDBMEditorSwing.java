@@ -1,3 +1,7 @@
+/*------------------------------------------------------------------------------
+08/07/2022 MAW addRow() removed setting spnrQty to 0 then 1 to fire update as the value when loaded from file always got set to 1.
+------------------------------------------------------------------------------*/
+
 package uk.org.peltast.ald.views;
 
 import java.awt.BorderLayout;
@@ -69,7 +73,7 @@ import uk.org.peltast.ald.swing.WTable.WTableSection;
  * 
  * @author Mark Andrew Wheadon
  * @date 26th June 2012.
- * @copyright Mark Andrew Wheadon, 2012,2021.
+ * @copyright Mark Andrew Wheadon, 2012,2022.
  * @licence MIT License.
  */
 public class ArmyListDBMEditorSwing {
@@ -889,9 +893,6 @@ public class ArmyListDBMEditorSwing {
 				spnrCmd1, spnrCmd2, spnrCmd3, spnrCmd4,
 				tfElementsUnused};
 		mTable.addRow(WTableSection.BODY, arr);
-
-		spnrQty.setValue(0);
-		spnrQty.setValue(1);	// to force a model change
 
 		JComponent editor = spnrQty.getEditor();
 		JFormattedTextField field = (JFormattedTextField) editor.getComponent(0);
