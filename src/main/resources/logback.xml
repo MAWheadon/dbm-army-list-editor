@@ -1,0 +1,16 @@
+<configuration>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+	   <file>${user.home}/logs/ald.log</file>
+        <append>true</append>
+        <immediateFlush>true</immediateFlush>
+        <encoder>
+            <pattern>%d{HH:mm:ss} %p %file %method %line %m%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="uk.org.peltast.ald" level="debug" additivity="false">
+        <appender-ref ref="FILE"/>
+    </logger>
+
+</configuration>
