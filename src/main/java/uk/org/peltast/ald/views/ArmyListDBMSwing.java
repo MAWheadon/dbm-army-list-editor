@@ -201,6 +201,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			mIndexTable.addMouseListener(new MouseAdapter() {
 				@Override
 				public void mousePressed(MouseEvent me) {
+					log.info("Mouse event is {}", me);
 					if (SwingUtilities.isLeftMouseButton(me)) {
 						if (me.getClickCount() == 2) {
 							editArmy();

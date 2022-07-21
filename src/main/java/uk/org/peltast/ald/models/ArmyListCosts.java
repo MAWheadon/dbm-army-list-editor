@@ -1,8 +1,10 @@
 package uk.org.peltast.ald.models;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -299,7 +301,7 @@ public class ArmyListCosts {
 		SAXParserFactory factory = SAXParserFactory.newInstance();
 		SAXParser saxParser = factory.newSAXParser();
 		XMLReader xmlReader = new XMLReader();
-		try (InputStream is = ArmyListCosts.class.getClassLoader().getResourceAsStream(costFileName)) {
+		try (InputStream is = ArmyListCosts.class.getClassLoader().getResourceAsStream("cost_files/" + costFileName)) {
 			saxParser.parse(is, xmlReader);
 		}
 		log.info("Completed loading costs file {}", costFileName);
@@ -312,6 +314,45 @@ public class ArmyListCosts {
 
 	//--------------------------------------------------------------------------
 	static List<ArmyListVersion> listAvailableVersions() {
+		final String index = "cost_files/cost_files_index.txt";
+		String regex1 = "^costs_dbm_\\d_\\d.xml$";
+		String regex2 = "\\d";
+		Pattern pattern1 = Pattern.compile(regex1);
+		Pattern pattern2 = Pattern.compile(regex2);
+		TreeSet<ArmyListVersion> vers = new TreeSet<>();
+		log.info("About to list costs files from index at {}", index);
+		try (InputStream is = ArmyListCosts.class.getClassLoader().getResourceAsStream(index);
+				InputStreamReader isr = new InputStreamReader(is);
+				BufferedReader br = new BufferedReader(isr)) {
+			String name;
+			while ((name = br.readLine()) != null) {
+				log.info("Processing costs file {}", name);
+				Matcher matcher1 = pattern1.matcher(name);
+				boolean matches = matcher1.matches();
+				if (matches) {
+					Matcher matcher2 = pattern2.matcher(name);
+					boolean found = matcher2.find();
+					if (found) {
+						String major = matcher2.group();
+						found = matcher2.find();
+						if (found) {
+							String minor = matcher2.group();
+							ArmyListVersion ver = new ArmyListVersion(Integer.parseInt(major), Integer.parseInt(minor));
+							vers.add(ver);
+						}
+					}
+				}
+			}
+		}
+		catch (IOException e) {
+			log.warn("Failed when loading cost files because of {}", e.getMessage());
+		}
+		log.info("Available version are {}", vers);
+		return(new ArrayList<>(vers));
+	}
+
+	//--------------------------------------------------------------------------
+	static List<ArmyListVersion> listAvailableVersionsOld() {
 		String regex1 = "^costs_dbm_\\d_\\d.xml$";
 		String regex2 = "\\d";
 		Pattern pattern1 = Pattern.compile(regex1);

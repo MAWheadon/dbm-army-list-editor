@@ -181,14 +181,17 @@ public class ArmyListDBMEditorSwing {
 		JPanel pnl = new JPanel();
 		pnl.add(new JLabel("Book"));
 		mCbBooks.addActionListener(e -> {
-			final String book = mCbBooks.getSelectedItem().toString();
-			if (mIndexChanges != null) {
-				mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_BOOK, book);
-				log.info("Index change: book is {}", book);
-			}
-			if (!mSetupPhase) {
-				mModel.setArmyBook(book, mChanges);
-				log.info("After setup phase: book is {}", book);
+			int index = mCbBooks.getSelectedIndex();
+			if (index >= 0) {
+				final String book = mCbBooks.getItemAt(index);
+				if (mIndexChanges != null) {
+					mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_BOOK, book);
+					log.info("Index change: book is {}", book);
+				}
+				if (!mSetupPhase) {
+					mModel.setArmyBook(book, mChanges);
+					log.info("After setup phase: book is {}", book);
+				}
 			}
 		});
 
