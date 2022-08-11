@@ -1,5 +1,6 @@
 /*-------------------------------------------------------------------------------
 08/07/2022 MAW setRowQuantity() now calls (new) updateLineCosts().
+11/08/2022 MAW Added saveAs() to facilitate copying armies.
 -------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.models;
@@ -833,6 +834,17 @@ public class ArmyListDBMModel {
 	public void save(ArmyListModelChange change) throws IOException, XMLStreamException {
 		save();
 		change.changed(false);
+	}
+
+	//--------------------------------------------------------------------------
+	/** Clears the armyId so a new one will be generated.
+	 * @throws IOException
+	 * @throws XMLStreamException */
+	public void saveAs() throws IOException, XMLStreamException {
+		mArmyId = null;
+		getArmyId();	// generate a new armyId
+		mLastFileUsed = null;
+		save();
 	}
 
 	//--------------------------------------------------------------------------
