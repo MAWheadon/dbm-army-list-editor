@@ -1,3 +1,7 @@
+/*------------------------------------------------------------------------------
+11/08/2022 MAW Added ability to copy armies.
+------------------------------------------------------------------------------*/
+
 package uk.org.peltast.ald.views;
 
 import java.awt.BorderLayout;
@@ -109,7 +113,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			JPanel pnlMain = new JPanel(new BorderLayout());
 
 			mMenuItemNewArmy.addActionListener(e -> {
-				newArmy();
+				newArmy(null);
 			});
 
 			mMenuItemDeleteArmy.addActionListener(e -> {
@@ -144,6 +148,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			});
 
 			mMenuItemCopyArmy.addActionListener(e -> {
+				copyArmy();
 			});
 
 			mMenuItemChangeGroupOfArmy.addActionListener(e -> {
@@ -274,8 +279,14 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 		}	// run
 
 		//----------------------------------------------------------------------
-		private void newArmy() {
-			ArmyListDBMModel model = new ArmyListDBMModel();
+		private void newArmy(ArmyListDBMModel copyArmyList) {
+			final ArmyListDBMModel model;
+			if (copyArmyList == null) {
+				model = new ArmyListDBMModel();
+			}
+			else {
+				model = copyArmyList;
+			}
 			ArmyListDBMEditorSwing ed;
 			try {
 				ed = new ArmyListDBMEditorSwing(model);
@@ -291,56 +302,99 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			tab.setName(armyId);
 			int tabIndex = getTabIndex(armyId);
 			mTabPane.setTitleAt(tabIndex, "");
-			mIndexTableModel.addRow(new Object[] {"", "", "", "", ""});
-			mIndexTableModel.addHiddenValue(armyId);
-			log.info("Table model row count is {}, hidden row count is {}", mIndexTableModel.getRowCount(), mIndexTableModel.getHiddenRowCount());
-			mArmyListIndex.addEntry(armyId, "", "", "", "", "");
+			addIndexEntry(armyId, "", "", "", "", "");
 			int tabCount = mTabPane.getTabCount();
 			mTabPane.setSelectedIndex(tabCount-1);
 		}
 
 		//----------------------------------------------------------------------
+		private void addIndexEntry(String armyId, String groupName, String name, String book, String year, String points) {
+			mIndexTableModel.addRow(new Object[] {groupName, name, book, year, points});
+			mIndexTableModel.addHiddenValue(armyId);
+			log.info("Table model row count is {}, hidden row count is {}", mIndexTableModel.getRowCount(), mIndexTableModel.getHiddenRowCount());
+			mArmyListIndex.addEntry(armyId, groupName, name, book, year, points);
+		}
+
+		//----------------------------------------------------------------------
 		private void editArmy() {
 			String armyId = getSelectedArmyId();
+			ArmyListDBMModel armyList = loadArmy(armyId);
+			if (armyList != null) {
+				editArmy(armyId, armyList);
+			}
+		}
+
+		//----------------------------------------------------------------------
+		private void editArmy(String armyId, ArmyListDBMModel armyList) {
+			int tabIndex = getTabIndex(armyId);
+			if (tabIndex == -1) {
+				ArmyListDBMEditorSwing ed;
+				try {
+					ed = new ArmyListDBMEditorSwing(armyList);
+				} catch (ParserConfigurationException | SAXException | IOException e1) {
+					String txt = "Error when trying to create army editor";
+					log.warn(txt , e1);
+					errorMessage(txt);
+					return;
+				}
+				ed.setIndexChanges(ArmyListDBMSwing.this);
+				Component tab = mTabPane.add(ed.getJPanel());
+				tab.setName(armyId);
+				int tabCount = mTabPane.getTabCount();
+				String armyName = armyList.getArmyName();
+				mTabPane.setTitleAt(tabCount-1, armyName);
+				mTabPane.setSelectedIndex(tabCount-1);
+			}
+			else {
+				mTabPane.setSelectedIndex(tabIndex);	// else - just switch to that tab
+			}
+		}
+
+		//----------------------------------------------------------------------
+		private void copyArmy() {
+			String armyId = getSelectedArmyId();
+			ArmyListDBMModel armyList = loadArmy(armyId);
+			if (armyList != null) {
+				try {
+					armyList.getArmyCosts();	// forces the most recent
+					armyList.saveAs();
+					String newArmyId = armyList.getArmyId();
+					String groupName = "";
+					String armyName = armyList.getArmyName();
+					String book = armyList.getArmyBook();
+					String year = armyList.getArmyYear();
+					String points = "";
+					addIndexEntry(newArmyId, groupName, armyName, book, year, points);
+					saveIndex();
+					editArmy(newArmyId, armyList);
+				}
+				catch (Exception e) {
+					String txt = "Error when trying to copy an army";
+					log.warn(txt , e);
+					errorMessage(txt);
+				}
+			}
+		}
+
+		//----------------------------------------------------------------------
+		private ArmyListDBMModel loadArmy(String armyId) {
+			ArmyListDBMModel armyList = null;
 			if (armyId == null) {
 				errorMessage("Army not selected");
 			}
 			else {
-				ArmyListDBMModel armyList = new ArmyListDBMModel();
+				armyList = new ArmyListDBMModel();
 				try {
 					armyList.loadFromFile(mDataDir, armyId);
 				}
 				catch (NoSuchFileException nsfe) {
 					errorMessage("The army could not be found");
-					return;
 				}
 				catch (IOException e1) {
 					errorMessage("Could not load army");
-					return;
-				}
-				int tabIndex = getTabIndex(armyId);
-				if (tabIndex == -1) {
-					ArmyListDBMEditorSwing ed;
-					try {
-						ed = new ArmyListDBMEditorSwing(armyList);
-					} catch (ParserConfigurationException | SAXException | IOException e1) {
-						String txt = "Error when trying to create army editor";
-						log.warn(txt , e1);
-						errorMessage(txt);
-						return;
-					}
-					ed.setIndexChanges(ArmyListDBMSwing.this);
-					Component tab = mTabPane.add(ed.getJPanel());
-					tab.setName(armyId);
-					int tabCount = mTabPane.getTabCount();
-					String armyName = armyList.getArmyName();
-					mTabPane.setTitleAt(tabCount-1, armyName);
-					mTabPane.setSelectedIndex(tabCount-1);
-				}
-				else {
-					mTabPane.setSelectedIndex(tabIndex);	// else - just switch to that tab
 				}
 			}
+			return(armyList);
 		}
 
 		//--------------------------------------------------------------------------
