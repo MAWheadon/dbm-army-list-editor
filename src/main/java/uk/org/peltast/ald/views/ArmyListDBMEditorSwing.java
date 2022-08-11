@@ -1,5 +1,6 @@
 /*------------------------------------------------------------------------------
 08/07/2022 MAW addRow() removed setting spnrQty to 0 then 1 to fire update as the value when loaded from file always got set to 1.
+11/08/2022 MAW setupArmyButtons() set the default row quantity to 1 when a new row is added.
 ------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.views;
@@ -260,7 +261,10 @@ public class ArmyListDBMEditorSwing {
 
 	//--------------------------------------------------------------------------
 	private JPanel setupArmyButtons() {
-		mBtnAdd.addActionListener(e -> mModel.addRow(mChanges));
+		mBtnAdd.addActionListener(e -> {
+			int rowIndex = mModel.addRow(mChanges);
+			mChanges.setRowField(ArmyListConstants.ROW_QTY, rowIndex, 1);	// the minimum will be 1
+		});
 		mBtnDelete.addActionListener(this::doButtonDelete);
 		mBtnMoveUp.addActionListener(this::doButtonMoveUp);
 		mBtnMoveDown.addActionListener(this::doButtonMoveDown);
@@ -792,7 +796,7 @@ public class ArmyListDBMEditorSwing {
 		chkBox.addActionListener(e -> enableDeleteAndMoveButtons());
 		
 		SpinnerNumberModel snmQty = new SpinnerNumberModel(1,1,200,1);
-		JSpinner spnrQty = new JSpinner(snmQty);
+		final JSpinner spnrQty = new JSpinner(snmQty);
 		spnrQty.setName(ArmyListConstants.ROW_QTY.toString());
 		spnrQty.addChangeListener(e -> {
 			WTableLocation loc = mTable.getLocation(spnrQty);
