@@ -1,6 +1,7 @@
 /*------------------------------------------------------------------------------
 08/07/2022 MAW addRow() removed setting spnrQty to 0 then 1 to fire update as the value when loaded from file always got set to 1.
 11/08/2022 MAW setupArmyButtons() set the default row quantity to 1 when a new row is added.
+12/08/2022 MAW Fix minor bug in above change. Now updates points on the index page.
 ------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.views;
@@ -263,7 +264,7 @@ public class ArmyListDBMEditorSwing {
 	private JPanel setupArmyButtons() {
 		mBtnAdd.addActionListener(e -> {
 			int rowIndex = mModel.addRow(mChanges);
-			mChanges.setRowField(ArmyListConstants.ROW_QTY, rowIndex, 1);	// the minimum will be 1
+			mModel.setRowQuantity(rowIndex, 1, mChanges);
 		});
 		mBtnDelete.addActionListener(this::doButtonDelete);
 		mBtnMoveUp.addActionListener(this::doButtonMoveUp);
@@ -388,7 +389,13 @@ public class ArmyListDBMEditorSwing {
 				case ARMY_NAME : mTfDescription.setText(value); break;
 				case ARMY_YEAR: mTfYear.setText(value); break;
 
-				case ARMY_POINTS : mTfArmyCosts.setText(value); break;
+				case ARMY_POINTS : {
+					mTfArmyCosts.setText(value);
+					if (mIndexChanges != null) {
+						mIndexChanges.change(mModel.getArmyId(), ArmyListConstants.ARMY_POINTS, value);
+					}
+					break;
+				}
 				case ARMY_EL_COUNT : mTfArmyElementCount.setText(value); break;
 				case ARMY_EL_EQUIV : mTfArmyEquiv.setText(value); break;
 				case ARMY_HALF : mTfArmyHalf.setText(value); break;
