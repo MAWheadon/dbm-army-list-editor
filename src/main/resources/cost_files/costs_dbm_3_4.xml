@@ -166,7 +166,7 @@
 			</type>
 			<type name="Wb">
 				<troop grade="S" ap="5" eq="1" adjs="gen,ally,mtdally,mtd" />
-				<troop grade="O" ap="4" eq="1" adjs="gen,ally,mtdally,mtd" />
+				<troop grade="O" ap="3" eq="1" adjs="gen,ally,mtdally,mtd" />
 				<troop grade="F" ap="3" eq="1" adjs="gen,ally,mtdally,mtd" />
 			</type>
 			<type name="Ax">
