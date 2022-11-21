@@ -486,6 +486,17 @@ public class ArmyListDBMModel {
 	}
 
 	//--------------------------------------------------------------------------
+	/** Sets a troop description
+	 * @param rowIndex 0 based row index, perhaps returned from addRow.
+	 * @param description The description, e.g. Companions. 
+	 * @param changes Register that the field has changed and so the list needs saving. */
+	public void setRowDescription(int rowIndex, String description, ArmyListModelChange changes) {
+		Row row = mRows.get(rowIndex);
+		row.mDesc = description;
+		changes.changed(true);
+	}
+
+	//--------------------------------------------------------------------------
 	/** Gets a troop's description
 	 * @param rowIndex The nought based row number.
 	 * @return The description, e.g. Companions. */

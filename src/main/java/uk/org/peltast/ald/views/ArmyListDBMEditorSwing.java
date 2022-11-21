@@ -66,6 +66,7 @@ import uk.org.peltast.ald.models.NameValuePair;
 import uk.org.peltast.ald.swing.WTable;
 import uk.org.peltast.ald.swing.WTable.WTableLocation;
 import uk.org.peltast.ald.swing.WTable.WTableSection;
+import uk.org.peltast.ald.views.ArmyListDBMPanel.Choice;
 
 /** An editor for an individual army list. This editor is 'dumb' in that it only
  * ever displays values and accepts input. All changes are sent to the model, 
@@ -526,9 +527,7 @@ public class ArmyListDBMEditorSwing {
 					}
 					index++;
 				}
-				if (selectedIndex != -1) {
-					cb.setSelectedIndex(selectedIndex);
-				}
+				cb.setSelectedIndex(selectedIndex);
 				for (ActionListener listener : listeners) {
 					cb.addActionListener(listener);
 				}
@@ -665,11 +664,11 @@ public class ArmyListDBMEditorSwing {
 
 	//--------------------------------------------------------------------------
 	private void doButtonClose(ActionEvent ae) {
-		boolean ok = true;
+		Choice choice = Choice.YES;
 		if (mBtnSave.isEnabled()) {
-			ok = confirmMessage("The list has unsaved changes, do you want to exit and loose the changes?");
+			choice = ArmyListDBMPanel.confirmMessage(mPnlMain, "The list has unsaved changes, do you want to exit and loose the changes?");
 		}
-		if (ok) {
+		if (choice == Choice.YES) {
 			String armyId = mModel.getArmyId();
 			mIndexChanges.change(armyId, ArmyListConstants.CLOSE, null);
 		}
@@ -680,16 +679,22 @@ public class ArmyListDBMEditorSwing {
 		try {
 			mModel.save(mChanges);
 		} catch (IOException | XMLStreamException e) {
-			errorMessage("Saving army list failed because of : " + e.toString());
+			ArmyListDBMPanel.errorMessage(mPnlMain, "Saving army list failed because of : " + e.toString());
 		}
 	}
 
 	//--------------------------------------------------------------------------
 	private void doButtonReload(ActionEvent ae) {
 		try {
-			mModel.reloadFromFile(mChanges);
+			Choice choice = Choice.YES;
+			if (mBtnReload.isEnabled()) {
+				choice = ArmyListDBMPanel.confirmMessage(mPnlMain, "Are you sure you want to reload and loose your changes?");
+			}
+			if (choice == Choice.YES) {
+				mModel.reloadFromFile(mChanges);
+			}
 		} catch (IOException e) {
-			errorMessage("Reloading army list failed because of : " + e.toString());
+			ArmyListDBMPanel.errorMessage(mPnlMain, "Reloading army list failed because of : " + e.toString());
 		}
 	}
 
@@ -708,7 +713,7 @@ public class ArmyListDBMEditorSwing {
 			br.write(txt);
 		}
 		catch (IOException ioe) {
-			errorMessage("Export to text failed");
+			ArmyListDBMPanel.errorMessage(mPnlMain, "Export to text failed");
 		}
 		log.info("Army {} exported to text file {}", mModel.getArmyName(), ff.getPath());
 	}
@@ -815,7 +820,7 @@ public class ArmyListDBMEditorSwing {
 		tfDesc.getDocument().addDocumentListener(new DocumentListener() {
 			private void change() {
 				WTableLocation loc = mTable.getLocation(spnrQty);
-				mModel.setRowDescription(loc.getRow(), tfDesc.getText());
+				mModel.setRowDescription(loc.getRow(), tfDesc.getText(), mChanges);
 			}
 			@Override
 			public void changedUpdate(DocumentEvent e) { change(); }
@@ -919,21 +924,12 @@ public class ArmyListDBMEditorSwing {
 	}
 
 	//--------------------------------------------------------------------------
-	private boolean confirmMessage(String msg) {
-		int result = JOptionPane.showConfirmDialog(mPnlMain, msg);
-		if (result == JOptionPane.YES_OPTION) {
-			return(true);
-		}	// if
-		return(false);
-	}	// confirm_message
-
-	//--------------------------------------------------------------------------
-	private void errorMessage(String msg) {
-		JOptionPane.showMessageDialog(mPnlMain, msg);
+	void setIndexChanges(ArmyIndexModelChange indexChanges) {
+		mIndexChanges = indexChanges;
 	}
 
 	//--------------------------------------------------------------------------
-	void setIndexChanges(ArmyIndexModelChange indexChanges) {
-		mIndexChanges = indexChanges;
+	ArmyListDBMModel getModel() {
+		return(mModel);
 	}
 }
