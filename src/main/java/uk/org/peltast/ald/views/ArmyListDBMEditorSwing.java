@@ -7,8 +7,10 @@
 package uk.org.peltast.ald.views;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -16,6 +18,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.print.Book;
 import java.awt.print.PageFormat;
+import java.awt.print.Paper;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
@@ -544,39 +547,62 @@ public class ArmyListDBMEditorSwing {
 	//--------------------------------------------------------------------------
 	private class PagePrinter implements Printable {
 		private static final String ARIAL = "Arial";
+		private int mColumn1Left;
+		private int mColumn1Right;
+		private int mColumn2Left;
+		private int mColumn2Right;
+
 		public int print(Graphics graphics, PageFormat pgFmt, int pgNbr) throws PrinterException {
-			final int c_left_margin_1 = 75;
-			final int c_left_margin_2 = 310;
 			log.info("About to print page {}.", pgNbr);
 
 			Graphics2D g2d = (Graphics2D)graphics;
+			Paper paper = pgFmt.getPaper();
+			int width72th = (int)paper.getWidth();
+			int margin = 72;
+			mColumn1Left = margin +1;
+			mColumn1Right = width72th/2 - margin/6;
+			mColumn2Left = width72th/2 + margin/6;
+			mColumn2Right = width72th - margin;
+
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
 			Font fontHeading = new Font(ARIAL, Font.BOLD, 11);
 			Font fontPlain = new Font(ARIAL, Font.PLAIN, 8);
 
 			g2d.setFont(fontHeading);
+			FontMetrics metricsHeading = g2d.getFontMetrics(fontHeading);
+			final int heightHeading = metricsHeading.getHeight();
+			int yy = (int)pgFmt.getImageableY();
+			yy += heightHeading;
 			String str = mTfDescription.getText();
-			g2d.drawString(str,c_left_margin_1,100);
+			g2d.drawString(str,mColumn1Left,yy);
 			str = mTfYear.getText();
-			g2d.drawString(str,c_left_margin_1+200,100);
+			g2d.drawString(str,mColumn1Left+200,yy);
 			str = (String)mCbBooks.getSelectedItem();
-			g2d.drawString(str,c_left_margin_1+275,100);
-			g2d.drawLine(0,105,2000,105);
+			g2d.drawString(str,mColumn1Left+275,yy);
+			yy += 4;
+			g2d.drawLine(0,yy,2000,yy);
 			String totalCost = mTable.getValue(WTableSection.FOOTER,0,ColNo.QTY.ordinal());
 			String totalQty = mTable.getValue(WTableSection.FOOTER,1,ColNo.QTY.ordinal());
 			String totalElEq = mTable.getValue(WTableSection.FOOTER,2,ColNo.QTY.ordinal());
 			String halfArmy = mTable.getValue(WTableSection.FOOTER,3,ColNo.QTY.ordinal());
 			str = MessageFormat.format("{0} total cost, {1} total elements, {2} equivalents, half the army is {3} elements",totalCost,totalQty,totalElEq,halfArmy);
 			g2d.setFont(fontPlain);
-			g2d.drawString(str,c_left_margin_1,120);
-			int yy = 160;
-			int yy1 = printOneCommand(g2d,1,yy,c_left_margin_1);
-			int yy2 = printOneCommand(g2d,2,yy,c_left_margin_2);
+			yy += heightHeading;
+			g2d.drawString(str,mColumn1Left,yy);
+			yy += heightHeading * 2;
+			final int yyCmdTop = yy;
+			int yy1 = printOneCommand(g2d,1,yy);
+			int yy2 = printOneCommand(g2d,2,yy);
 			yy = Math.max(yy1,yy2);
-			yy1 = printOneCommand(g2d,3,yy,c_left_margin_1);
-			yy2 = printOneCommand(g2d,4,yy,c_left_margin_2);
+			g2d.setColor(new Color(0xffd700));
+			g2d.drawRect(mColumn1Left+1, yyCmdTop+1, mColumn1Right-mColumn1Left-1, yy-yyCmdTop-heightHeading);
+			g2d.drawRect(mColumn2Left+1, yyCmdTop+1, mColumn2Right-mColumn2Left-1, yy-yyCmdTop-heightHeading);
+			g2d.setColor(java.awt.Color.black);
+			yy += heightHeading / 2;
+			yy1 = printOneCommand(g2d,3,yy);
+			yy2 = printOneCommand(g2d,4,yy);
 			yy = Math.max(yy1,yy2);
-			printTableTopGrid(g2d,yy,c_left_margin_1);
+			printTableTopGrid(g2d,yy,mColumn1Left);
 			log.info("Finished printing page {}.", pgNbr);
 			return(PAGE_EXISTS);
 		}	// print
@@ -605,12 +631,18 @@ public class ArmyListDBMEditorSwing {
 		}
 
 		//----------------------------------------------------------------------
-		private int printOneCommand(Graphics2D g2d, int cmd, int yy, int leftMargin) {
-			final int c_line_height = 16;
+		private int printOneCommand(Graphics2D g2d, int cmd, int yy) {
 			Font fontHeading = new Font(ARIAL, Font.BOLD, 10);
 			Font fontPlain = new Font(ARIAL, Font.PLAIN, 8);
+			FontMetrics metricsHeading = g2d.getFontMetrics(fontHeading);
+			final int heightHeading = metricsHeading.getHeight();
+			FontMetrics metricsPlain = g2d.getFontMetrics(fontPlain);
+			final int heightPlain = metricsPlain.getHeight() * 11 / 10;	// 10% leading
+
 			int rowCount = mTable.getNumberOfRows(WTableSection.BODY);
 			boolean cmdHeadingPrinted = false;
+			int colLeft = cmd==1||cmd==3?mColumn1Left:mColumn2Left;
+			int colRight = cmd==1||cmd==3?mColumn1Right:mColumn2Right;
 			for (int rr=0; rr<rowCount; rr++) {
 				String str = mTable.getValue(WTableSection.BODY,rr,ColNo.CMD1.ordinal()-1+cmd);
 				int cmdQty = str.length()>0 ? Integer.parseInt(str) : 0;
@@ -624,14 +656,19 @@ public class ArmyListDBMEditorSwing {
 				String adj = mTable.getValue(WTableSection.BODY,rr,ColNo.ADJ.ordinal());
 				if (!cmdHeadingPrinted) {
 					g2d.setFont(fontHeading);
-					g2d.drawString("Command "+cmd,leftMargin,yy);
-					yy += c_line_height;
+					str = "Command " + cmd;
+					int widthHeading = metricsHeading.stringWidth(str);
+					g2d.setColor(new Color(0xffd700));
+					g2d.fillRect(colLeft, yy-heightHeading+3, colRight-colLeft, heightHeading);
+					g2d.setColor(java.awt.Color.black);
+					g2d.drawString(str, colLeft+2, yy);
+					yy += heightPlain * 3 / 2;
 					cmdHeadingPrinted = true;
 				}	// if
 				str = MessageFormat.format("{0} {1}, {2} {3}({4}) {5}",cmdQty,desc,drill,type,grade,adj);
 				g2d.setFont(fontPlain);
-				g2d.drawString(str,leftMargin,yy);
-				yy += c_line_height;
+				g2d.drawString(str,colLeft+2,yy);
+				yy += heightPlain;
 			}	// for - each row
 			if (cmdHeadingPrinted) {
 				String points = mTable.getValue(WTableSection.FOOTER,0,ColNo.CMD1.ordinal()-1+cmd);
@@ -639,10 +676,10 @@ public class ArmyListDBMEditorSwing {
 				String eq = mTable.getValue(WTableSection.FOOTER,2,ColNo.CMD1.ordinal()-1+cmd);
 				String breakPoint = mTable.getValue(WTableSection.FOOTER,3,ColNo.CMD1.ordinal()-1+cmd);
 				String str = MessageFormat.format("{0} points, {1} elements, {2} equivalents, {3} break", points, totalEl, eq, breakPoint);
-				yy += c_line_height / 2;
-				g2d.drawString(str,leftMargin,yy);
+				yy += heightPlain / 2;
+				g2d.drawString(str,colLeft+2,yy);
 			}
-			yy += c_line_height * 2d;
+			yy += heightPlain * 2d;
 			return(yy);
 		}
 	}
