@@ -6,6 +6,7 @@
 
 package uk.org.peltast.ald.views;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -571,33 +572,37 @@ public class ArmyListDBMEditorSwing {
 			g2d.setFont(fontHeading);
 			FontMetrics metricsHeading = g2d.getFontMetrics(fontHeading);
 			final int heightHeading = metricsHeading.getHeight();
+			FontMetrics metricsPlain = g2d.getFontMetrics(fontPlain);
+			final int heightPlain = metricsPlain.getHeight();
 			int yy = (int)pgFmt.getImageableY();
+			final int yyTop = yy;
+			final int yyBottom = yyTop + heightHeading * 2 + heightPlain;
+			g2d.setColor(new Color(0x264A9C));
+			g2d.fillRect(mColumn1Left, yyTop, mColumn2Right-mColumn1Left, yyBottom - yyTop);
+			g2d.setColor(java.awt.Color.WHITE);
+			final int leftForText = mColumn1Left + 2;
+			
 			yy += heightHeading;
 			String str = mTfDescription.getText();
-			g2d.drawString(str,mColumn1Left,yy);
+			g2d.drawString(str,leftForText,yy);
 			str = mTfYear.getText();
-			g2d.drawString(str,mColumn1Left+200,yy);
+			g2d.drawString(str,leftForText+200,yy);
 			str = (String)mCbBooks.getSelectedItem();
-			g2d.drawString(str,mColumn1Left+275,yy);
+			g2d.drawString(str,leftForText+275,yy);
 			yy += 4;
-			g2d.drawLine(0,yy,2000,yy);
 			String totalCost = mTable.getValue(WTableSection.FOOTER,0,ColNo.QTY.ordinal());
 			String totalQty = mTable.getValue(WTableSection.FOOTER,1,ColNo.QTY.ordinal());
 			String totalElEq = mTable.getValue(WTableSection.FOOTER,2,ColNo.QTY.ordinal());
 			String halfArmy = mTable.getValue(WTableSection.FOOTER,3,ColNo.QTY.ordinal());
 			str = MessageFormat.format("{0} total cost, {1} total elements, {2} equivalents, half the army is {3} elements",totalCost,totalQty,totalElEq,halfArmy);
+
 			g2d.setFont(fontPlain);
 			yy += heightHeading;
-			g2d.drawString(str,mColumn1Left,yy);
+			g2d.drawString(str,leftForText,yy);
 			yy += heightHeading * 2;
-			final int yyCmdTop = yy;
 			int yy1 = printOneCommand(g2d,1,yy);
 			int yy2 = printOneCommand(g2d,2,yy);
 			yy = Math.max(yy1,yy2);
-			g2d.setColor(new Color(0xffd700));
-			g2d.drawRect(mColumn1Left+1, yyCmdTop+1, mColumn1Right-mColumn1Left-1, yy-yyCmdTop-heightHeading);
-			g2d.drawRect(mColumn2Left+1, yyCmdTop+1, mColumn2Right-mColumn2Left-1, yy-yyCmdTop-heightHeading);
-			g2d.setColor(java.awt.Color.black);
 			yy += heightHeading / 2;
 			yy1 = printOneCommand(g2d,3,yy);
 			yy2 = printOneCommand(g2d,4,yy);
@@ -610,7 +615,7 @@ public class ArmyListDBMEditorSwing {
 		//--------------------------------------------------------------------------
 		private void printTableTopGrid(Graphics2D g2d, int topMargin, int leftMargin) {
 			//	draw the table top grid, 3 boxes across and 2 boxes high
-			final int c_size = 130; 	// of the box
+			final int c_size = (mColumn2Right - mColumn1Left) / 3; 	// of the box
 
 			final int left_margin2 = leftMargin + (c_size);
 			final int left_margin3 = leftMargin + (c_size * 2);
@@ -638,11 +643,14 @@ public class ArmyListDBMEditorSwing {
 			final int heightHeading = metricsHeading.getHeight();
 			FontMetrics metricsPlain = g2d.getFontMetrics(fontPlain);
 			final int heightPlain = metricsPlain.getHeight() * 11 / 10;	// 10% leading
+			final int yyCmdTop = yy - heightHeading + 3;
+			g2d.setColor(java.awt.Color.GRAY);
+			g2d.setStroke(new BasicStroke(0.4f));
 
 			int rowCount = mTable.getNumberOfRows(WTableSection.BODY);
 			boolean cmdHeadingPrinted = false;
-			int colLeft = cmd==1||cmd==3?mColumn1Left:mColumn2Left;
-			int colRight = cmd==1||cmd==3?mColumn1Right:mColumn2Right;
+			final int colLeft = (cmd==1||cmd==3)?mColumn1Left+1:mColumn2Left;
+			final int colRight = (cmd==1||cmd==3)?mColumn1Right:mColumn2Right;
 			for (int rr=0; rr<rowCount; rr++) {
 				String str = mTable.getValue(WTableSection.BODY,rr,ColNo.CMD1.ordinal()-1+cmd);
 				int cmdQty = str.length()>0 ? Integer.parseInt(str) : 0;
@@ -657,10 +665,10 @@ public class ArmyListDBMEditorSwing {
 				if (!cmdHeadingPrinted) {
 					g2d.setFont(fontHeading);
 					str = "Command " + cmd;
-					int widthHeading = metricsHeading.stringWidth(str);
+					g2d.drawRect(colLeft, yyCmdTop, colRight-colLeft, heightHeading);
 					g2d.setColor(new Color(0xffd700));
-					g2d.fillRect(colLeft, yy-heightHeading+3, colRight-colLeft, heightHeading);
-					g2d.setColor(java.awt.Color.black);
+					g2d.fillRect(colLeft, yyCmdTop, colRight-colLeft, heightHeading);
+					g2d.setColor(java.awt.Color.DARK_GRAY);
 					g2d.drawString(str, colLeft+2, yy);
 					yy += heightPlain * 3 / 2;
 					cmdHeadingPrinted = true;
@@ -678,6 +686,10 @@ public class ArmyListDBMEditorSwing {
 				String str = MessageFormat.format("{0} points, {1} elements, {2} equivalents, {3} break", points, totalEl, eq, breakPoint);
 				yy += heightPlain / 2;
 				g2d.drawString(str,colLeft+2,yy);
+
+				// print surrounding box
+				g2d.drawRect(colLeft, yyCmdTop, colRight-colLeft, yy-yyCmdTop+4);
+				//g2d.setColor(java.awt.Color.black);
 			}
 			yy += heightPlain * 2d;
 			return(yy);
