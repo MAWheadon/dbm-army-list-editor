@@ -552,6 +552,7 @@ public class ArmyListDBMEditorSwing {
 		private int mColumn1Right;
 		private int mColumn2Left;
 		private int mColumn2Right;
+		private int mHeight;
 
 		public int print(Graphics graphics, PageFormat pgFmt, int pgNbr) throws PrinterException {
 			log.info("About to print page {}.", pgNbr);
@@ -559,11 +560,13 @@ public class ArmyListDBMEditorSwing {
 			Graphics2D g2d = (Graphics2D)graphics;
 			Paper paper = pgFmt.getPaper();
 			int width72th = (int)paper.getWidth();
-			int margin = 72;
+			
+			int margin = (int)pgFmt.getImageableX();
 			mColumn1Left = margin +1;
 			mColumn1Right = width72th/2 - margin/6;
 			mColumn2Left = width72th/2 + margin/6;
 			mColumn2Right = width72th - margin;
+			mHeight = (int)pgFmt.getImageableHeight();
 
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
 			Font fontHeading = new Font(ARIAL, Font.BOLD, 11);
@@ -607,29 +610,30 @@ public class ArmyListDBMEditorSwing {
 			yy1 = printOneCommand(g2d,3,yy);
 			yy2 = printOneCommand(g2d,4,yy);
 			yy = Math.max(yy1,yy2);
-			printTableTopGrid(g2d,yy,mColumn1Left);
+			printTableTopGrid(g2d);
 			log.info("Finished printing page {}.", pgNbr);
 			return(PAGE_EXISTS);
 		}	// print
 
 		//--------------------------------------------------------------------------
-		private void printTableTopGrid(Graphics2D g2d, int topMargin, int leftMargin) {
+		private void printTableTopGrid(Graphics2D g2d) {
 			//	draw the table top grid, 3 boxes across and 2 boxes high
 			final int c_size = (mColumn2Right - mColumn1Left) / 3; 	// of the box
+			final int topMargin = mHeight / 2 + 36;
 
-			final int left_margin2 = leftMargin + (c_size);
-			final int left_margin3 = leftMargin + (c_size * 2);
-			final int right_margin = leftMargin + (c_size * 3);	// 3 boxes
+			final int left_margin2 = mColumn1Left + (c_size);
+			final int left_margin3 = mColumn1Left + (c_size * 2);
+			final int right_margin = mColumn1Left + (c_size * 3);	// 3 boxes
 			final int middle_margin = topMargin + c_size;
 			final int bottom_margin = middle_margin + c_size;
 
 			// draw the 3 horizontal lines
-			g2d.drawLine(leftMargin,topMargin,right_margin,topMargin);
-			g2d.drawLine(leftMargin,middle_margin,right_margin,middle_margin);
-			g2d.drawLine(leftMargin,bottom_margin,right_margin,bottom_margin);
+			g2d.drawLine(mColumn1Left,topMargin,right_margin,topMargin);
+			g2d.drawLine(mColumn1Left,middle_margin,right_margin,middle_margin);
+			g2d.drawLine(mColumn1Left,bottom_margin,right_margin,bottom_margin);
 
 			// draw the 4 vertical lines
-			g2d.drawLine(leftMargin,topMargin,leftMargin,bottom_margin);
+			g2d.drawLine(mColumn1Left,topMargin,mColumn1Left,bottom_margin);
 			g2d.drawLine(left_margin2,topMargin,left_margin2,bottom_margin);
 			g2d.drawLine(left_margin3,topMargin,left_margin3,bottom_margin);
 			g2d.drawLine(right_margin,topMargin,right_margin,bottom_margin);
