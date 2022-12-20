@@ -552,7 +552,8 @@ public class ArmyListDBMEditorSwing {
 		private int mColumn1Right;
 		private int mColumn2Left;
 		private int mColumn2Right;
-		private int mHeight;
+		private int mPrintableHeight;
+		private int mPageHeight;
 
 		public int print(Graphics graphics, PageFormat pgFmt, int pgNbr) throws PrinterException {
 			log.info("About to print page {}.", pgNbr);
@@ -566,7 +567,8 @@ public class ArmyListDBMEditorSwing {
 			mColumn1Right = width72th/2 - margin/6;
 			mColumn2Left = width72th/2 + margin/6;
 			mColumn2Right = width72th - margin;
-			mHeight = (int)pgFmt.getImageableHeight();
+			mPrintableHeight = (int)pgFmt.getImageableHeight();
+			mPageHeight = (int)paper.getHeight();
 
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
 			Font fontHeading = new Font(ARIAL, Font.BOLD, 11);
@@ -619,7 +621,7 @@ public class ArmyListDBMEditorSwing {
 		private void printTableTopGrid(Graphics2D g2d) {
 			//	draw the table top grid, 3 boxes across and 2 boxes high
 			final int c_size = (mColumn2Right - mColumn1Left) / 3; 	// of the box
-			final int topMargin = mHeight / 2 + 36;
+			final int topMargin = mPageHeight / 2 + ((mPageHeight - mPrintableHeight) / 2) - 36;
 
 			final int left_margin2 = mColumn1Left + (c_size);
 			final int left_margin3 = mColumn1Left + (c_size * 2);
