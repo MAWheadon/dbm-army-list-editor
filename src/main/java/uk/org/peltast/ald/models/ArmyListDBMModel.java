@@ -39,14 +39,15 @@ import org.xml.sax.SAXException;
  *
  * @author Mark Andrew Wheadon
  * @date 9th June 2012.
- * @copyright Mark Andrew Wheadon, 2012,2020.
+ * @copyright Mark Andrew Wheadon, 2012,2022.
  * @licence MIT License.
  */
 public class ArmyListDBMModel {
 	private static final Logger log = LoggerFactory.getLogger(ArmyListDBMModel.class);
 	private static final int CMDS = 4;
 	public enum ColumnNames {QUANTITY, DESCRIPTION, DRILL, TYPE, GRADE, ADJUSTMENT, COST, TOTAL, CMD1_QTY, CMD2_QTY, CMD3_QTY, CMD4_QTY, UNUSED}
-	private enum AttributeNames{army, book, rules, version, id, name, year, rows, row, quantity, description, drill, type, grade, adjustment, cmdQty0, cmdQty1, cmdQty2, cmdQty3}
+	private enum AttributeNames {army, book, rules, version, id, name, year, rows, row, quantity, description, drill, type, grade, adjustment, cmdQty0, cmdQty1, cmdQty2, cmdQty3}
+	private enum Drills {Irr, Reg, Fort}
 
 	private class Row {
 		private int mQty;
@@ -414,7 +415,8 @@ public class ArmyListDBMModel {
 	/** Sets a quantity of troops for a command.
 	 * @param rowIndex The nought based row number.
 	 * @param command The 1 based command number (1-4).
-	 * @param quantity The number of elements. */
+	 * @param quantity The number of elements. 
+	 * @param changes Changes to post to the GUI. */
 	public void setRowCommandQuantity(int rowIndex, int command, int quantity, ArmyListModelChange changes) {
 		setRowCommandQuantity(rowIndex, command, quantity);
 		recalcTotals();
@@ -464,6 +466,14 @@ public class ArmyListDBMModel {
 			changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, unused);
 		}
 		changes.changed(true);
+	}
+
+	//--------------------------------------------------------------------------
+	public void resetRowCommandQuantities(int rowIndex, ArmyListModelChange changes) {
+		changes.setRowField(ArmyListConstants.ROW_CMD1_QTY, rowIndex, 0);
+		changes.setRowField(ArmyListConstants.ROW_CMD2_QTY, rowIndex, 0);
+		changes.setRowField(ArmyListConstants.ROW_CMD3_QTY, rowIndex, 0);
+		changes.setRowField(ArmyListConstants.ROW_CMD4_QTY, rowIndex, 0);
 	}
 
 	//--------------------------------------------------------------------------
@@ -537,8 +547,10 @@ public class ArmyListDBMModel {
 	//--------------------------------------------------------------------------
 	/** Sets the troop's drill.
 	 * @param rowIndex The nought based row number.
-	 * @param drill The drill e.g. Irr, Reg, Fort. */
+	 * @param drill The drill e.g. Irr, Reg, Fort. 
+	 * @param changes Changes to the GUI */
 	public void setRowDrill(int rowIndex, String drill, ArmyListModelChange changes) {
+		checkFortification(rowIndex, drill, changes);
 		setRowDrill(rowIndex,  drill);
 		Row row = mRows.get(rowIndex);
 		String typeName = row.mTypeName;
@@ -553,6 +565,40 @@ public class ArmyListDBMModel {
 		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 		updateArmyTotals(changes);
 		changes.changed(true);
+	}
+
+	//--------------------------------------------------------------------------
+	/** To initially set the right status fir fortifications. 
+	 * @param rowIndex The nought based row number.
+	 * @param changes Changes to the GUI */
+	private void checkFortification(int rowIndex, ArmyListModelChange changes) {
+		String drill = getRowDrill(rowIndex);
+		if (drill.equals(Drills.Fort.toString())) {
+			changes.setArmyLevelRow(rowIndex, true);
+			resetRowCommandQuantities(rowIndex, changes);
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	/** As the user switch between fortification and non-fortification we have to enable and disable the command
+	 * quantity fields and make visible (or not) the unused. 
+	 * @param rowIndex The nought based row number.
+	 * @param drill The drill e.g. Irr, Reg, Fort. 
+	 * @param changes Changes to the GUI */
+	private void checkFortification(int rowIndex, String drill, ArmyListModelChange changes) {
+		String drillOld = getRowDrill(rowIndex);
+		// If changing to or from fortification, tell the GUI to go into/out of army level for that line
+		if (drillOld != null && drillOld.equals(Drills.Fort.toString()) && 
+		   (drill.equals(Drills.Irr.toString()) || drill.equals(Drills.Reg.toString()))) {
+			changes.setArmyLevelRow(rowIndex, false);
+		}
+		else {
+			if ((drillOld == null || drillOld.equals(Drills.Irr.toString()) || drillOld.equals(Drills.Reg.toString())) &&
+				 drill.equals(Drills.Fort.toString())) {
+				changes.setArmyLevelRow(rowIndex, true);
+				resetRowCommandQuantities(rowIndex, changes);
+			}
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -1093,6 +1139,7 @@ public class ArmyListDBMModel {
 			}
 			changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rr, row.mCostPerElement);
 			changes.setRowField(ArmyListConstants.ROW_LINE_COST, rr, row.mTotalRowCost);
+			checkFortification(rr, changes);
 			changes.setRowField(ArmyListConstants.ROW_CMD1_QTY, rr, row.mCmdQty[0]);
 			changes.setRowField(ArmyListConstants.ROW_CMD2_QTY, rr, row.mCmdQty[1]);
 			changes.setRowField(ArmyListConstants.ROW_CMD3_QTY, rr, row.mCmdQty[2]);

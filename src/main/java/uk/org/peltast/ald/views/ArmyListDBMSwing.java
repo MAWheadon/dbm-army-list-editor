@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.NoSuchFileException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,6 +74,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 	private JMenuBar mMenuBar = new JMenuBar();
 	private JMenu mMenuFile = new JMenu("File");
 	private JMenuItem mMenuItemNewArmy = new JMenuItem("New army");
+	private JMenuItem mMenuItemAbout = new JMenuItem("About");
 	private JMenuItem mMenuItemExportArmy = new JMenuItem("Export army");
 	private JMenuItem mMenuItemImportArmy = new JMenuItem("Import army");
 	private JMenuItem mMenuItemEditArmy = new JMenuItem("Edit army");
@@ -116,6 +118,11 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 
 			mMenuItemNewArmy.addActionListener(e -> {
 				newArmy(null);
+			});
+
+			mMenuItemAbout.addActionListener(e -> {
+				String str = MessageFormat.format("Version {0}, Java version {1}", "0.9", System.getProperty("java.version"));
+				JOptionPane.showMessageDialog(mFrame, str, "About", JOptionPane.OK_OPTION);
 			});
 
 			mMenuItemDeleteArmy.addActionListener(e -> {
@@ -196,6 +203,7 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			pnl.add(mMenuBar,BorderLayout.NORTH);
 			mMenuBar.add(mMenuFile);
 			mMenuFile.add(mMenuItemNewArmy);
+			mMenuFile.add(mMenuItemAbout);
 			mMenuFile.add(mMenuItemExit);
 			mPopupMenu.add(mMenuItemChangeGroupOfArmy);
 			mPopupMenu.add(mMenuItemEditArmy);

@@ -56,4 +56,9 @@ public interface ArmyListModelChange {
 	 * @param values The new list of possible values.
 	 * @param selectedValue The value currently selected. May be null if no value is selected. */
 	public <E> void setRowFieldList(ArmyListConstants field, int row, List<E> values, String selectedValue);
+
+	/** Indicates (or not) that the given row applies to the whole army rather than a specific command, e.g. fortifications.
+	 * @param row the zero based row number the field is in.
+	 * @param armyLevel Does this row apply to the army as a whole or individual commands. */
+	public void setArmyLevelRow(int row, boolean armyLevel);
 }

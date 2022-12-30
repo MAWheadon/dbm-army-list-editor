@@ -408,6 +408,18 @@ public class WTable {
 	}
 
 	//--------------------------------------------------------------------------
+	public void setFieldEnabled(WTableSection section, int row, int column, boolean enabled) {
+		JComponent jcomp = getComponent(section, row, column);
+		jcomp.setEnabled(enabled);
+	}
+
+	//--------------------------------------------------------------------------
+	public void setFieldVisible(WTableSection section, int row, int column, boolean enabled) {
+		JComponent jcomp = getComponent(section, row, column);
+		jcomp.setVisible(enabled);
+	}
+
+	//--------------------------------------------------------------------------
 	public class WTableLocation {
 		public WTableSection mSection;
 		private final int mRow;

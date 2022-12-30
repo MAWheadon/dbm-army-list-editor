@@ -539,6 +539,14 @@ public class ArmyListDBMEditorSwing {
 		}
 
 		@Override
+		public void setArmyLevelRow(int rowIndex, boolean armyLevel) {
+			for (int ii=9; ii<13; ii++) {
+				mTable.setFieldEnabled(WTableSection.BODY, rowIndex, ii, !armyLevel);	// all command allocations
+			}
+			mTable.setFieldVisible(WTableSection.BODY, rowIndex, 13, !armyLevel);	// and unused
+		}
+
+		@Override
 		public void changed(boolean changed) {
 			mBtnSave.setEnabled(changed);
 			mBtnReload.setEnabled(changed);
@@ -548,6 +556,8 @@ public class ArmyListDBMEditorSwing {
 	//--------------------------------------------------------------------------
 	private class PagePrinter implements Printable {
 		private static final String ARIAL = "Arial";
+		private static final String COMMAND = "Command";
+		private static final String FORTIFICATIONS = "Fortifications";
 		private int mColumn1Left;
 		private int mColumn1Right;
 		private int mColumn2Left;
@@ -585,33 +595,55 @@ public class ArmyListDBMEditorSwing {
 			g2d.setColor(new Color(0x264A9C));
 			g2d.fillRect(mColumn1Left, yyTop, mColumn2Right-mColumn1Left, yyBottom - yyTop);
 			g2d.setColor(java.awt.Color.WHITE);
-			final int leftForText = mColumn1Left + 2;
+			final int leftForText = mColumn1Left + 6;
 			
 			yy += heightHeading;
 			String str = mTfDescription.getText();
-			g2d.drawString(str,leftForText,yy);
-			str = mTfYear.getText();
-			g2d.drawString(str,leftForText+200,yy);
-			str = (String)mCbBooks.getSelectedItem();
-			g2d.drawString(str,leftForText+275,yy);
+			String year = mTfYear.getText();
+			if (year != null && !year.isEmpty()) {
+				str += ", " + year;
+			}
+			int width = metricsHeading.stringWidth(str);
+			int pos = mColumn1Left + (int)(pgFmt.getImageableWidth() /2) - width / 2;	// centred
+			g2d.drawString(str, pos, yy);
 			yy += 4;
 			String totalCost = mTable.getValue(WTableSection.FOOTER,0,ColNo.QTY.ordinal());
 			String totalQty = mTable.getValue(WTableSection.FOOTER,1,ColNo.QTY.ordinal());
 			String totalElEq = mTable.getValue(WTableSection.FOOTER,2,ColNo.QTY.ordinal());
 			String halfArmy = mTable.getValue(WTableSection.FOOTER,3,ColNo.QTY.ordinal());
 			str = MessageFormat.format("{0} total cost, {1} total elements, {2} equivalents, half the army is {3} elements",totalCost,totalQty,totalElEq,halfArmy);
-
 			g2d.setFont(fontPlain);
 			yy += heightHeading;
-			g2d.drawString(str,leftForText,yy);
-			yy += heightHeading * 2;
-			int yy1 = printOneCommand(g2d,1,yy);
-			int yy2 = printOneCommand(g2d,2,yy);
-			yy = Math.max(yy1,yy2);
-			yy += heightHeading / 2;
-			yy1 = printOneCommand(g2d,3,yy);
-			yy2 = printOneCommand(g2d,4,yy);
-			yy = Math.max(yy1,yy2);
+			g2d.drawString(str, leftForText, yy);
+
+			String book = (String)mCbBooks.getSelectedItem();
+			width = metricsPlain.stringWidth(book);
+			pos = mColumn2Right - width - 6;
+			g2d.drawString(book, pos, yy);
+
+			// print commands
+			yy += heightHeading * 3;
+			int[] yyColumns = {yy, yy};
+
+			int column = 0;
+			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 1, column, yyColumns[column]);
+			yyColumns[column] += heightHeading / 2;
+
+			column = 1;
+			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 2, column, yyColumns[column]);
+			yyColumns[column] += heightHeading / 2;
+
+			column = yyColumns[0] < yyColumns[1] ? 0 : 1;
+			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 3, column, yyColumns[column]);
+			yyColumns[column] += heightHeading / 2;
+
+			column = yyColumns[0] < yyColumns[1] ? 0 : 1;
+			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 4, column, yyColumns[column]);
+			yyColumns[column] += heightHeading / 2;
+			
+			column = yyColumns[0] < yyColumns[1] ? 0 : 1;
+			printOneCommand(g2d, FORTIFICATIONS, true, 0, column, yyColumns[column]);
+
 			printTableTopGrid(g2d);
 			log.info("Finished printing page {}.", pgNbr);
 			return(PAGE_EXISTS);
@@ -642,9 +674,9 @@ public class ArmyListDBMEditorSwing {
 		}
 
 		//----------------------------------------------------------------------
-		private int printOneCommand(Graphics2D g2d, int cmd, int yy) {
+		private int printOneCommand(Graphics2D g2d, String title, boolean fortifications, int cmd, int column, int yy) {
 			Font fontHeading = new Font(ARIAL, Font.BOLD, 10);
-			Font fontPlain = new Font(ARIAL, Font.PLAIN, 8);
+			Font fontPlain = new Font(ARIAL, Font.PLAIN, 9);
 			FontMetrics metricsHeading = g2d.getFontMetrics(fontHeading);
 			final int heightHeading = metricsHeading.getHeight();
 			FontMetrics metricsPlain = g2d.getFontMetrics(fontPlain);
@@ -655,49 +687,79 @@ public class ArmyListDBMEditorSwing {
 
 			int rowCount = mTable.getNumberOfRows(WTableSection.BODY);
 			boolean cmdHeadingPrinted = false;
-			final int colLeft = (cmd==1||cmd==3)?mColumn1Left+1:mColumn2Left;
-			final int colRight = (cmd==1||cmd==3)?mColumn1Right:mColumn2Right;
+			final int colLeft = column == 0 ? mColumn1Left+1:mColumn2Left;
+			final int colRight = column == 0 ? mColumn1Right:mColumn2Right;
 			for (int rr=0; rr<rowCount; rr++) {
-				String str = mTable.getValue(WTableSection.BODY,rr,ColNo.CMD1.ordinal()-1+cmd);
+				String drill = mTable.getValue(WTableSection.BODY,rr,ColNo.DRILL.ordinal());
+				String str;
+				if (fortifications) {
+					if (drill.equals("Fort")) {
+						str = mTable.getValue(WTableSection.BODY,rr,ColNo.QTY.ordinal());
+					}
+					else {
+						str = "";
+					}
+				}
+				else {
+					if (drill.equals("Fort")) {
+						str = "";
+					}
+					else {
+						str = mTable.getValue(WTableSection.BODY,rr,ColNo.CMD1.ordinal()-1+cmd);
+					}
+				}
 				int cmdQty = str.length()>0 ? Integer.parseInt(str) : 0;
 				if (cmdQty == 0) {
 					continue;
 				}	// if - no elements for this row in this command so skip
 				String desc = mTable.getValue(WTableSection.BODY,rr,ColNo.DESC.ordinal());
-				String drill = mTable.getValue(WTableSection.BODY,rr,ColNo.DRILL.ordinal());
 				String type = mTable.getValue(WTableSection.BODY,rr,ColNo.TYPE.ordinal());
 				String grade = mTable.getValue(WTableSection.BODY,rr,ColNo.GRADE.ordinal());
 				String adj = mTable.getValue(WTableSection.BODY,rr,ColNo.ADJ.ordinal());
 				if (!cmdHeadingPrinted) {
 					g2d.setFont(fontHeading);
-					str = "Command " + cmd;
 					g2d.drawRect(colLeft, yyCmdTop, colRight-colLeft, heightHeading);
-					g2d.setColor(new Color(0xffd700));
+					g2d.setColor(new Color(0xffd700));	// gold
 					g2d.fillRect(colLeft, yyCmdTop, colRight-colLeft, heightHeading);
 					g2d.setColor(java.awt.Color.DARK_GRAY);
+					str = fortifications ? title : title + " " + cmd;
 					g2d.drawString(str, colLeft+2, yy);
-					yy += heightPlain * 3 / 2;
+					if (!fortifications) {
+						final String points = mTable.getValue(WTableSection.FOOTER,0,ColNo.CMD1.ordinal()-1+cmd);
+						str = MessageFormat.format("{0} points", points);
+						final int length = metricsPlain.stringWidth(str);
+						g2d.setFont(fontPlain);
+						g2d.drawString(str, colRight - length - 6, yy);
+					}
+					yy += heightHeading + heightPlain / 3;
 					cmdHeadingPrinted = true;
 				}	// if
-				str = MessageFormat.format("{0} {1}, {2} {3}({4}) {5}",cmdQty,desc,drill,type,grade,adj);
+				if (fortifications) {
+					str = MessageFormat.format("{0} {1}, {2} {3} {4}",cmdQty,desc,drill,type,adj);
+				}
+				else {
+					str = MessageFormat.format("{0} {1}, {2} {3}({4}) {5}",cmdQty,desc,drill,type,grade,adj);
+				}
 				g2d.setFont(fontPlain);
 				g2d.drawString(str,colLeft+2,yy);
 				yy += heightPlain;
 			}	// for - each row
 			if (cmdHeadingPrinted) {
-				String points = mTable.getValue(WTableSection.FOOTER,0,ColNo.CMD1.ordinal()-1+cmd);
-				String totalEl = mTable.getValue(WTableSection.FOOTER,1,ColNo.CMD1.ordinal()-1+cmd);
-				String eq = mTable.getValue(WTableSection.FOOTER,2,ColNo.CMD1.ordinal()-1+cmd);
-				String breakPoint = mTable.getValue(WTableSection.FOOTER,3,ColNo.CMD1.ordinal()-1+cmd);
-				String str = MessageFormat.format("{0} points, {1} elements, {2} equivalents, {3} break", points, totalEl, eq, breakPoint);
-				yy += heightPlain / 2;
-				g2d.drawString(str,colLeft+2,yy);
+				if (!fortifications) {
+					String totalEl = mTable.getValue(WTableSection.FOOTER,1,ColNo.CMD1.ordinal()-1+cmd);
+					String eq = mTable.getValue(WTableSection.FOOTER,2,ColNo.CMD1.ordinal()-1+cmd);
+					String breakPoint = mTable.getValue(WTableSection.FOOTER,3,ColNo.CMD1.ordinal()-1+cmd);
+					String str = MessageFormat.format("{0} elements, {1} equivalents, {2} break", totalEl, eq, breakPoint);
+					yy += heightPlain / 2;
+					g2d.drawString(str,colLeft+2,yy);
+				}
 
 				// print surrounding box
+				g2d.setColor(java.awt.Color.GRAY);
 				g2d.drawRect(colLeft, yyCmdTop, colRight-colLeft, yy-yyCmdTop+4);
-				//g2d.setColor(java.awt.Color.black);
+
+				yy += heightPlain * 2d;
 			}
-			yy += heightPlain * 2d;
 			return(yy);
 		}
 	}
