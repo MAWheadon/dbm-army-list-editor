@@ -2,6 +2,7 @@
 08/07/2022 MAW addRow() removed setting spnrQty to 0 then 1 to fire update as the value when loaded from file always got set to 1.
 11/08/2022 MAW setupArmyButtons() set the default row quantity to 1 when a new row is added.
 12/08/2022 MAW Fix minor bug in above change. Now updates points on the index page.
+17/01/2023 MAW Printing enhancements.
 ------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.views;
@@ -581,13 +582,13 @@ public class ArmyListDBMEditorSwing {
 			mPageHeight = (int)paper.getHeight();
 
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
-			Font fontHeading = new Font(ARIAL, Font.BOLD, 11);
-			Font fontPlain = new Font(ARIAL, Font.PLAIN, 8);
+			Font fontHeading = new Font(ARIAL, Font.BOLD, 13);
+			Font fontSubheading = new Font(ARIAL, Font.PLAIN, 9);
 
 			g2d.setFont(fontHeading);
 			FontMetrics metricsHeading = g2d.getFontMetrics(fontHeading);
 			final int heightHeading = metricsHeading.getHeight();
-			FontMetrics metricsPlain = g2d.getFontMetrics(fontPlain);
+			FontMetrics metricsPlain = g2d.getFontMetrics(fontSubheading);
 			final int heightPlain = metricsPlain.getHeight();
 			int yy = (int)pgFmt.getImageableY();
 			final int yyTop = yy;
@@ -611,8 +612,8 @@ public class ArmyListDBMEditorSwing {
 			String totalQty = mTable.getValue(WTableSection.FOOTER,1,ColNo.QTY.ordinal());
 			String totalElEq = mTable.getValue(WTableSection.FOOTER,2,ColNo.QTY.ordinal());
 			String halfArmy = mTable.getValue(WTableSection.FOOTER,3,ColNo.QTY.ordinal());
-			str = MessageFormat.format("{0} total cost, {1} total elements, {2} equivalents, half the army is {3} elements",totalCost,totalQty,totalElEq,halfArmy);
-			g2d.setFont(fontPlain);
+			str = MessageFormat.format("{0} total cost, {1} elements, {2} equivalents, half the army is {3} elements",totalCost,totalQty,totalElEq,halfArmy);
+			g2d.setFont(fontSubheading);
 			yy += heightHeading;
 			g2d.drawString(str, leftForText, yy);
 
@@ -633,15 +634,15 @@ public class ArmyListDBMEditorSwing {
 			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 2, column, yyColumns[column]);
 			yyColumns[column] += heightHeading / 2;
 
-			column = yyColumns[0] < yyColumns[1] ? 0 : 1;
+			column = yyColumns[0] <= yyColumns[1] ? 0 : 1;
 			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 3, column, yyColumns[column]);
 			yyColumns[column] += heightHeading / 2;
 
-			column = yyColumns[0] < yyColumns[1] ? 0 : 1;
+			column = yyColumns[0] <= yyColumns[1] ? 0 : 1;
 			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 4, column, yyColumns[column]);
 			yyColumns[column] += heightHeading / 2;
 			
-			column = yyColumns[0] < yyColumns[1] ? 0 : 1;
+			column = yyColumns[0] <= yyColumns[1] ? 0 : 1;
 			printOneCommand(g2d, FORTIFICATIONS, true, 0, column, yyColumns[column]);
 
 			printTableTopGrid(g2d);
@@ -675,11 +676,11 @@ public class ArmyListDBMEditorSwing {
 
 		//----------------------------------------------------------------------
 		private int printOneCommand(Graphics2D g2d, String title, boolean fortifications, int cmd, int column, int yy) {
-			Font fontHeading = new Font(ARIAL, Font.BOLD, 10);
-			Font fontPlain = new Font(ARIAL, Font.PLAIN, 9);
+			Font fontHeading = new Font(ARIAL, Font.BOLD, 11);
+			Font fontTroops = new Font(ARIAL, Font.PLAIN, 10);
 			FontMetrics metricsHeading = g2d.getFontMetrics(fontHeading);
 			final int heightHeading = metricsHeading.getHeight();
-			FontMetrics metricsPlain = g2d.getFontMetrics(fontPlain);
+			FontMetrics metricsPlain = g2d.getFontMetrics(fontTroops);
 			final int heightPlain = metricsPlain.getHeight() * 11 / 10;	// 10% leading
 			final int yyCmdTop = yy - heightHeading + 3;
 			g2d.setColor(java.awt.Color.GRAY);
@@ -728,7 +729,7 @@ public class ArmyListDBMEditorSwing {
 						final String points = mTable.getValue(WTableSection.FOOTER,0,ColNo.CMD1.ordinal()-1+cmd);
 						str = MessageFormat.format("{0} points", points);
 						final int length = metricsPlain.stringWidth(str);
-						g2d.setFont(fontPlain);
+						g2d.setFont(fontTroops);
 						g2d.drawString(str, colRight - length - 6, yy);
 					}
 					yy += heightHeading + heightPlain / 3;
@@ -740,7 +741,7 @@ public class ArmyListDBMEditorSwing {
 				else {
 					str = MessageFormat.format("{0} {1}, {2} {3}({4}) {5}",cmdQty,desc,drill,type,grade,adj);
 				}
-				g2d.setFont(fontPlain);
+				g2d.setFont(fontTroops);
 				g2d.drawString(str,colLeft+2,yy);
 				yy += heightPlain;
 			}	// for - each row
