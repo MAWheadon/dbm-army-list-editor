@@ -1,6 +1,7 @@
 /*-------------------------------------------------------------------------------
 08/07/2022 MAW setRowQuantity() now calls (new) updateLineCosts().
 11/08/2022 MAW Added saveAs() to facilitate copying armies.
+17/01/2023 MAW Added getCommandsWithRowQuantities(), improved setRowDrill() when changes occur.
 -------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.models;
@@ -555,16 +556,46 @@ public class ArmyListDBMModel {
 		Row row = mRows.get(rowIndex);
 		String typeName = row.mTypeName;
 		List<String> types = mCosts.getTypes(drill);
-		if (!types.contains(typeName)) {
-			typeName = null;
+		if (types.contains(typeName)) {
+			changes.setRowFieldList(ArmyListConstants.ROW_TYPE, rowIndex, types, typeName);
+			String gradeName = row.mGradeName;
+			List<String> grades = mCosts.getTroopGradeList(drill, typeName);
+			if (grades.contains(gradeName)) {
+				changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rowIndex, grades, gradeName);
+			}
+			else {
+				changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rowIndex, grades, null);
+			}
 		}
-		changes.setRowFieldList(ArmyListConstants.ROW_TYPE, rowIndex, types, typeName);
+		else {
+			changes.setRowFieldList(ArmyListConstants.ROW_TYPE, rowIndex, types, null);
+			changes.setRowFieldList(ArmyListConstants.ROW_GRADE, rowIndex, new ArrayList<String>(), null);
+		}
 		refreshAdjustments(rowIndex, changes);
 		recalcTotals();
 		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
 		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
-		updateArmyTotals(changes);
+		List<Integer> commandsWithRowQuantities = getCommandsWithRowQuantities(rowIndex);
+		if (commandsWithRowQuantities.isEmpty()) {
+			updateArmyTotals(changes);
+		}
+		else {
+			updateAllTotals(changes);
+		}
 		changes.changed(true);
+	}
+
+	//--------------------------------------------------------------------------
+	List<Integer> getCommandsWithRowQuantities(int rowIndex) {
+		List<Integer> cmds = new ArrayList<>();
+		Row row = mRows.get(rowIndex);
+		for (int cc=0; cc<CMDS; cc++) {
+			int qty = row.mCmdQty[cc];
+			if (qty > 0) {
+				cmds.add(cc+1);
+			}
+		}
+		return(cmds);
 	}
 
 	//--------------------------------------------------------------------------
