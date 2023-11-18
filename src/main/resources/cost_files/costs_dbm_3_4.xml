@@ -69,7 +69,7 @@
 			</type>
 			<type name="Bw">
 				<troop grade="S" ap="6.5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
-				<troop grade="O" ap="5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="O" ap="5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2,rr" />
 				<troop grade="I" ap="4" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
 				<troop grade="X" ap="7" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
 			</type>
