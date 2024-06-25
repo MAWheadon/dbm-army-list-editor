@@ -54,6 +54,8 @@
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
     <maven.compiler.target>17</maven.compiler.target>
+    <imageName>ArmyListDesignerDBM</imageName>
+    <mainClass>uk.org.peltast.ald.App</mainClass>
     <java.version>17</java.version>
     <maven.compiler.source>17</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

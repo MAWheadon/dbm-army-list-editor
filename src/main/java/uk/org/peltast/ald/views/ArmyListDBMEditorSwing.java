@@ -583,7 +583,7 @@ public class ArmyListDBMEditorSwing {
 
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
 			Font fontHeading = new Font(ARIAL, Font.BOLD, 13);
-			Font fontSubheading = new Font(ARIAL, Font.PLAIN, 9);
+			Font fontSubheading = new Font(ARIAL, Font.PLAIN, 8);
 
 			g2d.setFont(fontHeading);
 			FontMetrics metricsHeading = g2d.getFontMetrics(fontHeading);
