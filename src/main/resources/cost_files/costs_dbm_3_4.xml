@@ -44,7 +44,7 @@
 				<troop grade="F" ap="4" eq="1" adjs="gen,gen1,gen2,ally" />
 			</type>
 			<type name="Sp">
-				<troop grade="S" ap="7" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
+				<troop grade="S" ap="6" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
 				<troop grade="O" ap="5" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
 				<troop grade="I" ap="4" eq="1" adjs="gen,gen1,gen2,ally,mtd,mtdgen1,mtdgen2" />
 			</type>
