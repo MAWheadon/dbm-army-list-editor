@@ -123,16 +123,16 @@
 				<troop grade="X" ap="22" eq="1" adjs="gen,ally" />
 			</type>
 			<type name="Kn">
-				<troop grade="S" ap="12" eq="1" adjs="gen,ally,chally,ch" />
-				<troop grade="O" ap="10" eq="1" adjs="gen,ally,chally,ch" />
-				<troop grade="I" ap="8" eq="1" adjs="gen,ally,chally,ch,rr" />
-				<troop grade="F" ap="9" eq="1" adjs="gen,ally,chally" />
+				<troop grade="S" ap="12" eq="1" adjs="gen,ally,chally,chgen,ch" />
+				<troop grade="O" ap="10" eq="1" adjs="gen,ally,chally,chgen,ch" />
+				<troop grade="I" ap="8" eq="1" adjs="gen,ally,chally,chgen,ch,rr" />
+				<troop grade="F" ap="9" eq="1" adjs="gen,ally,chally,chgen,ch" />
 				<troop grade="X" ap="11" eq="1" adjs="gen,ally" />
 			</type>
 			<type name="Cv">
-				<troop grade="S" ap="9" eq="1" adjs="gen,ally,chally,ch,rr" />
-				<troop grade="O" ap="7" eq="1" adjs="gen,ally,chally,ch,rr" />
-				<troop grade="I" ap="5" eq="1" adjs="gen,ally,chally,ch,rr" />
+				<troop grade="S" ap="9" eq="1" adjs="gen,ally,chally,chgen,ch,rr" />
+				<troop grade="O" ap="7" eq="1" adjs="gen,ally,chally,chgen,ch,rr" />
+				<troop grade="I" ap="5" eq="1" adjs="gen,ally,chally,chgen,ch,rr" />
 			</type>
 			<type name="Lh">
 				<troop grade="S" ap="7" eq="1" adjs="gen,ally" />
