@@ -38,9 +38,8 @@ import org.xml.sax.SAXException;
 
 /** A DBM army list.
  *
- * @author Mark Andrew Wheadon
- * @date 9th June 2012.
- * @copyright Mark Andrew Wheadon, 2012,2022.
+ * @author MA Wheadon
+ * @copyright MA Wheadon, 2012,2026.
  * @licence MIT License.
  */
 public class ArmyListDBMModel {
@@ -183,7 +182,7 @@ public class ArmyListDBMModel {
 		recalcTotals();
 		changes.deleteRow(index);
 		updateAllTotals(changes);
-		changes.changed(true);
+		setChanged(changes);
 	}
 
 	//--------------------------------------------------------------------------
@@ -257,7 +256,7 @@ public class ArmyListDBMModel {
 	public int addRow(ArmyListModelChange changes) {
 		int row = addRow();
 		changes.addRow();
-		changes.changed(true);
+		setChanged(changes);
 		return(row);
 	}
 
@@ -288,6 +287,7 @@ public class ArmyListDBMModel {
 		Row row = mRows.remove(rowIndex);
 		mRows.add(rowIndex-1,row);
 		change.moveRowUp(rowIndex);
+		setChanged(change);
 	}
 
 	//--------------------------------------------------------------------------
@@ -301,6 +301,7 @@ public class ArmyListDBMModel {
 		Row row = mRows.remove(rowIndex);
 		mRows.add(rowIndex+1,row);
 		change.moveRowDown(rowIndex);
+		setChanged(change);
 	}
 
 	//--------------------------------------------------------------------------
@@ -390,7 +391,7 @@ public class ArmyListDBMModel {
 			changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, unused);
 		}
 		updateLineCosts(rowIndex, changes);
-		changes.changed(true);
+		setChanged(changes);
 	}
 
 	//--------------------------------------------------------------------------
@@ -466,7 +467,7 @@ public class ArmyListDBMModel {
 		} else {
 			changes.setRowField(ArmyListConstants.ROW_UNUSED, rowIndex, unused);
 		}
-		changes.changed(true);
+		setChanged(changes);
 	}
 
 	//--------------------------------------------------------------------------
@@ -504,7 +505,7 @@ public class ArmyListDBMModel {
 	public void setRowDescription(int rowIndex, String description, ArmyListModelChange changes) {
 		Row row = mRows.get(rowIndex);
 		row.mDesc = description;
-		changes.changed(true);
+		setChanged(changes);
 	}
 
 	//--------------------------------------------------------------------------
@@ -533,7 +534,7 @@ public class ArmyListDBMModel {
 			if (!found) adj = "";
 		}
 		changes.setRowFieldList(ArmyListConstants.ROW_ADJ, rowIndex, adjustmentTexts, adj);
-		changes.changed(true);
+		setChanged(changes);
 	}
 
 	//--------------------------------------------------------------------------
@@ -582,7 +583,7 @@ public class ArmyListDBMModel {
 		else {
 			updateAllTotals(changes);
 		}
-		changes.changed(true);
+		setChanged(changes);
 	}
 
 	//--------------------------------------------------------------------------
@@ -669,7 +670,7 @@ public class ArmyListDBMModel {
 		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
 		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 		updateArmyTotals(changes);
-		changes.changed(true);
+		setChanged(changes);
 	}
 
 	//--------------------------------------------------------------------------
@@ -702,7 +703,7 @@ public class ArmyListDBMModel {
 		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
 		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 		updateArmyTotals(changes);
-		changes.changed(true);
+		setChanged(changes);
 	}
 
 	//--------------------------------------------------------------------------
@@ -734,7 +735,7 @@ public class ArmyListDBMModel {
 		changes.setRowField(ArmyListConstants.ROW_TROOP_COST, rowIndex, row.mCostPerElement);
 		changes.setRowField(ArmyListConstants.ROW_LINE_COST, rowIndex, row.mTotalRowCost);
 		updateArmyTotals(changes);
-		changes.changed(true);
+		setChanged(changes);
 	}
 
 	//--------------------------------------------------------------------------
@@ -1185,6 +1186,7 @@ public class ArmyListDBMModel {
 		recalcTotals();
 		updateAllLineCosts(changes);
 		updateAllTotals(changes);
+		mChanged = false;	// pragmatic solution to the problem that adding rows etc. above will cause a call back to the model to say that changes have been made.
 		changes.changed(false);
 	}
 

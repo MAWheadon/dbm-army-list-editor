@@ -3,6 +3,7 @@
 11/08/2022 MAW setupArmyButtons() set the default row quantity to 1 when a new row is added.
 12/08/2022 MAW Fix minor bug in above change. Now updates points on the index page.
 17/01/2023 MAW Printing enhancements.
+13/01/2026 MAW Printing now prints commands left to right and top to bottom. Table top grid now reduced in size to fit below the list.
 ------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.views;
@@ -79,9 +80,9 @@ import uk.org.peltast.ald.views.ArmyListDBMPanel.Choice;
  * and deleteRow just inform the model and it then calls back via a change to 
  * get the row added or deleted.
  * 
- * @author Mark Andrew Wheadon
+ * @author MA Wheadon
  * @date 26th June 2012.
- * @copyright Mark Andrew Wheadon, 2012,2022.
+ * @copyright MA Wheadon, 2012,2026.
  * @licence MIT License.
  */
 public class ArmyListDBMEditorSwing {
@@ -563,8 +564,8 @@ public class ArmyListDBMEditorSwing {
 		private int mColumn1Right;
 		private int mColumn2Left;
 		private int mColumn2Right;
-		private int mPrintableHeight;
 		private int mPageHeight;
+		private int mBottomMargin;
 
 		public int print(Graphics graphics, PageFormat pgFmt, int pgNbr) throws PrinterException {
 			log.info("About to print page {}.", pgNbr);
@@ -573,13 +574,16 @@ public class ArmyListDBMEditorSwing {
 			Paper paper = pgFmt.getPaper();
 			int width72th = (int)paper.getWidth();
 			
-			int margin = (int)pgFmt.getImageableX();
-			mColumn1Left = margin +1;
-			mColumn1Right = width72th/2 - margin/6;
-			mColumn2Left = width72th/2 + margin/6;
-			mColumn2Right = width72th - margin;
-			mPrintableHeight = (int)pgFmt.getImageableHeight();
+			final int leftMargin = (int)pgFmt.getImageableX();
+			final int topMargin = (int)pgFmt.getImageableY();
+			mColumn1Left = leftMargin +1;
+			mColumn1Right = width72th/2 - leftMargin/6;
+			mColumn2Left = width72th/2 + leftMargin/6;
+			mColumn2Right = width72th - leftMargin;
 			mPageHeight = (int)paper.getHeight();
+			final int paperHeight = (int)paper.getHeight();
+			final int printableHeight = (int)paper.getImageableHeight();
+			mBottomMargin = paperHeight - printableHeight - topMargin;
 
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
 			Font fontHeading = new Font(ARIAL, Font.BOLD, 13);
@@ -634,33 +638,36 @@ public class ArmyListDBMEditorSwing {
 			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 2, column, yyColumns[column]);
 			yyColumns[column] += heightHeading / 2;
 
-			column = yyColumns[0] <= yyColumns[1] ? 0 : 1;
+			column = 0;
 			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 3, column, yyColumns[column]);
 			yyColumns[column] += heightHeading / 2;
 
-			column = yyColumns[0] <= yyColumns[1] ? 0 : 1;
+			column = 1;
 			yyColumns[column] = printOneCommand(g2d, COMMAND, false, 4, column, yyColumns[column]);
 			yyColumns[column] += heightHeading / 2;
 			
 			column = yyColumns[0] <= yyColumns[1] ? 0 : 1;
-			printOneCommand(g2d, FORTIFICATIONS, true, 0, column, yyColumns[column]);
+			yyColumns[column] = printOneCommand(g2d, FORTIFICATIONS, true, 0, column, yyColumns[column]);
 
-			printTableTopGrid(g2d);
+			yy = Math.max(yyColumns[0],yyColumns[1]);
+			printTableTopGrid(g2d, yy);
 			log.info("Finished printing page {}.", pgNbr);
 			return(PAGE_EXISTS);
 		}	// print
 
 		//--------------------------------------------------------------------------
-		private void printTableTopGrid(Graphics2D g2d) {
+		private void printTableTopGrid(Graphics2D g2d, int yy) {
 			//	draw the table top grid, 3 boxes across and 2 boxes high
-			final int c_size = (mColumn2Right - mColumn1Left) / 3; 	// of the box
-			final int topMargin = mPageHeight / 2 + ((mPageHeight - mPrintableHeight) / 2) - 36;
+			int squareSize = (mColumn2Right - mColumn1Left) / 3; 	// of the box
+			int squareSize2 = (mPageHeight - yy - mBottomMargin) / 2; 	// of the box
+			squareSize = Math.min(squareSize, squareSize2);
+			final int topMargin = mPageHeight - mBottomMargin - (squareSize * 2);
 
-			final int left_margin2 = mColumn1Left + (c_size);
-			final int left_margin3 = mColumn1Left + (c_size * 2);
-			final int right_margin = mColumn1Left + (c_size * 3);	// 3 boxes
-			final int middle_margin = topMargin + c_size;
-			final int bottom_margin = middle_margin + c_size;
+			final int left_margin2 = mColumn1Left + (squareSize);
+			final int left_margin3 = mColumn1Left + (squareSize * 2);
+			final int right_margin = mColumn1Left + (squareSize * 3);	// 3 boxes
+			final int middle_margin = topMargin + squareSize;
+			final int bottom_margin = middle_margin + squareSize;
 
 			// draw the 3 horizontal lines
 			g2d.drawLine(mColumn1Left,topMargin,right_margin,topMargin);

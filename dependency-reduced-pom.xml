@@ -4,7 +4,7 @@
   <groupId>uk.org.peltast</groupId>
   <artifactId>ald</artifactId>
   <name>ald</name>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>2025.12.04</version>
   <url>http://maven.apache.org</url>
   <build>
     <plugins>
@@ -95,12 +95,9 @@
     </dependency>
   </dependencies>
   <properties>
-    <maven.compiler.release>17</maven.compiler.release>
-    <maven.compiler.target>17</maven.compiler.target>
     <imageName>ArmyListDesignerDBM</imageName>
     <mainClass>uk.org.peltast.ald.App</mainClass>
-    <java.version>17</java.version>
-    <maven.compiler.source>17</maven.compiler.source>
+    <java.version>21</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <native.maven.plugin.version>0.9.28</native.maven.plugin.version>
   </properties>

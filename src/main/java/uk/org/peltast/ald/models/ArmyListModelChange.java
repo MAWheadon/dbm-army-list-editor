@@ -1,8 +1,20 @@
+/*-------------------------------------------------------------------------------
+13/01/2026 MAW Tidy up.
+-------------------------------------------------------------------------------*/
 package uk.org.peltast.ald.models;
 
 import java.util.List;
-import java.util.Map;
 
+/** A view class implements this class to reflect changes to the model in the 
+ * view. When a user adds or changes a row or value that may cause several 
+ * updates in the model (such as totals) and they need to be reflected in 
+ * the view. The view does not do any working out, the model does this so the
+ * model needs to tell the view all the things that were updated.
+ * 
+ * @author MA Wheadon
+ * @copyright MA Wheadon, 2019,2026.
+ * @licence MIT License.
+ */
 public interface ArmyListModelChange {
 
 	/** changed status */

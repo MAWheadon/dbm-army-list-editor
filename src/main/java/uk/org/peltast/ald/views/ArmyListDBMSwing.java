@@ -1,5 +1,6 @@
 /*------------------------------------------------------------------------------
 11/08/2022 MAW Added ability to copy armies.
+13/01/2026 MAW Improved About box. Fixed bug where closing did not detect army list changes.
 ------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.views;
@@ -21,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JComboBox;
-import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -33,7 +33,6 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import javax.swing.WindowConstants;
 import javax.swing.table.DefaultTableModel;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLStreamException;
@@ -121,8 +120,10 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			});
 
 			mMenuItemAbout.addActionListener(e -> {
-				String str = MessageFormat.format("Version {0}, Java version {1}", "0.9", System.getProperty("java.version"));
-				JOptionPane.showMessageDialog(mFrame, str, "About", JOptionPane.OK_OPTION);
+				final String logPath = ArmyListModelUtils.getLogPath();
+				String str = MessageFormat.format("Version: {0}\nJava version: {1}\nData directory: {2}\nLog file: {3}",
+						"2025-12-04", System.getProperty("java.version"), mDataDir, logPath);
+				JOptionPane.showMessageDialog(mFrame, str, "About", JOptionPane.INFORMATION_MESSAGE);
 			});
 
 			mMenuItemDeleteArmy.addActionListener(e -> {
@@ -182,23 +183,8 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			});
 
 			mMenuItemExit.addActionListener(e -> {
-				// check if there are unsaved changes to any armies
-				// else
-				int reply = JOptionPane.showConfirmDialog(mFrame, "Are you sure you want to exit?", "Exit?",  JOptionPane.YES_NO_OPTION);
-				if (reply == JOptionPane.YES_OPTION) {
-					if (mChanged) {
-						try {
-							saveIndex();
-						}
-						catch (Exception e1) {
-							log.warn("Error when saving index", e1);
-							errorMessage("Error when saving index: "+e1);
-						}
-					}
-					mFrame.dispose();
-				}
+				handleWindowClosing();
 			});
-			mFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
 			pnl.add(mMenuBar,BorderLayout.NORTH);
 			mMenuBar.add(mMenuFile);
@@ -245,47 +231,10 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			mFrame.addWindowListener(new WindowAdapter() {
 				@Override
 				public void windowClosing(WindowEvent we) {
-					int tabCount = mTabPane.getTabCount();
-					for (int tabIndex=0; tabIndex<tabCount; tabIndex++) {
-						Component comp = mTabPane.getComponentAt(tabIndex);
-						if (comp instanceof ArmyListDBMPanel) {
-							ArmyListDBMPanel parentPnl = (ArmyListDBMPanel)comp;
-							ArmyListDBMEditorSwing ed = parentPnl.getEditor();
-							ArmyListDBMModel mdl = ed.getModel();
-							boolean changed = mdl.getChanged();
-							if (changed) {
-								mTabPane.setSelectedIndex(tabIndex);
-								Choice choice = ArmyListDBMPanel.confirmMessage(mFrame, "This army list has changed, would you like to save it?");
-								if (choice == Choice.CANCEL) {
-									log.info("Closing cancelled for army {}", mdl.getArmyName());
-									return;	// no close
-								}
-								if (choice == Choice.YES) {
-									log.info("Saving army {}", mdl.getArmyName());
-									try {
-										mdl.save();
-									}
-									catch (Exception e) {
-										log.warn("Saving army {} failed because of ", e, mdl.getArmyName());
-										ArmyListDBMPanel.errorMessage(mFrame, "Failed to save army");
-									}
-								}
-							}
-						}
-					}	// for - each tab
-					if (mChanged) {
-						try {
-							saveIndex();
-						}
-						catch (Exception e) {
-							log.warn("Error when saving index", e);
-							errorMessage("Error when saving index: "+e);
-						}
-					}
-					mFrame.dispose();	// close
+					handleWindowClosing();
 				}	// windowClosing
 			});
-			mFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+			//mFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
 			try {
 				loadIndex();
@@ -295,6 +244,53 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 			}
 			mFrame.setVisible(true);
 		}	// run
+
+		//----------------------------------------------------------------------
+		private void handleWindowClosing() {
+			int reply = JOptionPane.showConfirmDialog(mFrame, "Are you sure you want to exit?", "Exit?",  JOptionPane.YES_NO_OPTION);
+			if (reply == JOptionPane.YES_OPTION) {
+				// cycle through all open tabs (of army lists) and check to see if they have unsaved changes.
+				int tabCount = mTabPane.getTabCount();
+				for (int tabIndex=0; tabIndex<tabCount; tabIndex++) {
+					Component comp = mTabPane.getComponentAt(tabIndex);
+					if (comp instanceof ArmyListDBMPanel) {
+						ArmyListDBMPanel parentPnl = (ArmyListDBMPanel)comp;
+						ArmyListDBMEditorSwing ed = parentPnl.getEditor();
+						ArmyListDBMModel mdl = ed.getModel();
+						boolean changed = mdl.getChanged();
+						if (changed) {
+							mTabPane.setSelectedIndex(tabIndex);
+							Choice choice = ArmyListDBMPanel.confirmMessage(mFrame, "This army list has changed, would you like to save it?");
+							if (choice == Choice.CANCEL) {
+								log.info("Closing cancelled for army {}", mdl.getArmyName());
+								return;	// no close
+							}
+							if (choice == Choice.YES) {
+								log.info("Saving army {}", mdl.getArmyName());
+								try {
+									mdl.save();
+								}
+								catch (Exception e) {
+									log.warn("Saving army {} failed because of ", e, mdl.getArmyName());
+									ArmyListDBMPanel.errorMessage(mFrame, "Failed to save army");
+								}
+							}
+						}
+					}
+				}	// for - each tab
+				if (mChanged) {
+					try {
+						saveIndex();
+					}
+					catch (Exception e) {
+						log.warn("Error when saving index", e);
+						errorMessage("Error when saving index: "+e);
+					}
+				}
+				mFrame.saveFramePosition();
+				mFrame.dispose();	// close
+			}
+		}
 
 		//----------------------------------------------------------------------
 		private void newArmy(ArmyListDBMModel copyArmyList) {
@@ -511,12 +507,12 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 	}
 
 	//--------------------------------------------------------------------------
-	private int getTabIndex(String id) {
+	private int getTabIndex(String armyId) {
 		int tabCount = mTabPane.getTabCount();
 		for (int ii=0; ii<tabCount; ii++) {
 			Component comp = mTabPane.getComponentAt(ii);
-			String panelName = comp.getName();
-			if (panelName.equals(id)) {
+			String panelName = comp.getName();	// which in our case is the army id
+			if (panelName.equals(armyId)) {
 				return(ii);
 			}
 		}

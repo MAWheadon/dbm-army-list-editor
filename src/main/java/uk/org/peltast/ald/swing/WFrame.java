@@ -1,3 +1,6 @@
+/*------------------------------------------------------------------------------
+13/01/2026 MAW Saves and restores the window position. Now uses OS dependent data and log paths.
+------------------------------------------------------------------------------*/
 package uk.org.peltast.ald.swing;
 
 import java.awt.Component;
@@ -20,77 +23,88 @@ import javax.swing.JSeparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.org.peltast.ald.views.ArmyListDBMSwing;
+import uk.org.peltast.ald.models.ArmyListModelUtils;
 
 /** A helper Swing class that creates a JFrame and remembers where it is on 
  * the desktop.
  * 
- * @author Mark Andrew Wheadon
+ * @author MA Wheadon
  * @date 16th October 2013.
- * @copyright Mark Andrew Wheadon, 2013,2014.
+ * @copyright MA Wheadon, 2013,2025.
  * @licence MIT License.
  */
 public class WFrame extends JFrame {
 	private static final Logger log = LoggerFactory.getLogger(WFrame.class);
 	private static final long serialVersionUID = 1L;
-	private File mSettingsFile;
 	private boolean mSettingsFileExists;
-	private String mDir;
 	private File mDirFile;
+	private File mSettingsFile;
 	private JMenuBar mMenuBar;
 
 	//----------------------------------------------------------------------
 	public WFrame(String title) {
 		super(title);
-		mDir = title.replace(' ', '_');		
-		String path = System.getProperty("user.home");
-		path = path + File.separator + mDir + File.separator + mDir + ".properties";
+		final String dir = ArmyListModelUtils.getDataPath();
+		final String path = dir + File.separator + "settings.properties";
+		log.info("Settings file is {}", path);
 		mSettingsFile = new File(path);
 		mDirFile = mSettingsFile.getParentFile();
 		mDirFile.mkdirs();
+		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);	// Important
 		addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent we) {
-				Rectangle rect = getBounds();
-				Properties props = new Properties();
-				props.setProperty(WindowState.WINDOW_STATE_LEFT.name(),String.valueOf(rect.x));
-				props.setProperty(WindowState.WINDOW_STATE_TOP.name(),String.valueOf(rect.y));
-				props.setProperty(WindowState.WINDOW_STATE_WIDTH.name(),String.valueOf(rect.width));
-				props.setProperty(WindowState.WINDOW_STATE_HEIGHT.name(),String.valueOf(rect.height));
-				int windowState = getExtendedState();
-				if ((windowState & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
-					props.setProperty(WindowState.WINDOW_STATE_MAXIMISED.name(),"true");
-				}
-				else {
-					props.setProperty(WindowState.WINDOW_STATE_MAXIMISED.name(),"false");
-				}
-				try (FileOutputStream fos = new FileOutputStream(mSettingsFile)) {
-					props.store(fos,"");
-					System.exit(0);
-				}
-				catch (Exception e) {
-					log.warn("Error", e);
-				}
+				//saveFramePosition();
 			}
 		});
 
 		Properties props = new Properties();
-		try (FileInputStream fis = new FileInputStream(mSettingsFile)) {
-			mSettingsFileExists = mSettingsFile.exists();
-			if (mSettingsFileExists) {
-				props.load(fis);
-				int left = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_LEFT.name()));
-				int top = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_TOP.name()));
-				int width = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_WIDTH.name()));
-				int height = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_HEIGHT.name()));
-				boolean max = Boolean.parseBoolean(props.getProperty(WindowState.WINDOW_STATE_MAXIMISED.name()));
-				setBounds(left,top,width,height);
-				int windowState = getExtendedState();
-				if (max) {
-					windowState |= Frame.MAXIMIZED_BOTH;
+		final boolean exists = mSettingsFile.exists();
+		if (exists) {
+			try (FileInputStream fis = new FileInputStream(mSettingsFile)) {
+				mSettingsFileExists = mSettingsFile.exists();
+				if (mSettingsFileExists) {
+					props.load(fis);
+					int left = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_LEFT.name()));
+					int top = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_TOP.name()));
+					int width = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_WIDTH.name()));
+					int height = Integer.parseInt(props.getProperty(WindowState.WINDOW_STATE_HEIGHT.name()));
+					boolean max = Boolean.parseBoolean(props.getProperty(WindowState.WINDOW_STATE_MAXIMISED.name()));
+					setBounds(left,top,width,height);
+					int windowState = getExtendedState();
+					if (max) {
+						windowState |= Frame.MAXIMIZED_BOTH;
+					}
+					setExtendedState(windowState);
 				}
-				setExtendedState(windowState);
 			}
+			catch (Exception e) {
+				log.warn("Error", e);
+			}
+		} else {
+			log.info("Settings file does not exist: {}", path);
+		}
+	}
+
+	//----------------------------------------------------------------------
+	public void saveFramePosition() {
+		Rectangle rect = getBounds();
+		log.info("Saving window position {}, rect");
+		Properties props = new Properties();
+		props.setProperty(WindowState.WINDOW_STATE_LEFT.name(),String.valueOf(rect.x));
+		props.setProperty(WindowState.WINDOW_STATE_TOP.name(),String.valueOf(rect.y));
+		props.setProperty(WindowState.WINDOW_STATE_WIDTH.name(),String.valueOf(rect.width));
+		props.setProperty(WindowState.WINDOW_STATE_HEIGHT.name(),String.valueOf(rect.height));
+		int windowState = getExtendedState();
+		if ((windowState & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH) {
+			props.setProperty(WindowState.WINDOW_STATE_MAXIMISED.name(),"true");
+		}
+		else {
+			props.setProperty(WindowState.WINDOW_STATE_MAXIMISED.name(),"false");
+		}
+		try (FileOutputStream fos = new FileOutputStream(mSettingsFile)) {
+			props.store(fos,"");
+			System.exit(0);
 		}
 		catch (Exception e) {
 			log.warn("Error", e);
