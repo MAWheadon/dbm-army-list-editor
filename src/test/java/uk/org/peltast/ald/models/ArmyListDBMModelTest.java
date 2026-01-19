@@ -11,6 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** Tests the model.
+*
+* @author MA Wheadon
+* @copyright MA Wheadon, 2026.
+* @licence MIT License.
+*/
 class ArmyListDBMModelTest {
 	private static final Logger log = LoggerFactory.getLogger(ArmyListDBMModelTest.class);
 	private static ArmyListDBMModel mdl;

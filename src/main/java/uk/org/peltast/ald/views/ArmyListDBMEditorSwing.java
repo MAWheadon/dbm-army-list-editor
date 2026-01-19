@@ -4,6 +4,7 @@
 12/08/2022 MAW Fix minor bug in above change. Now updates points on the index page.
 17/01/2023 MAW Printing enhancements.
 13/01/2026 MAW Printing now prints commands left to right and top to bottom. Table top grid now reduced in size to fit below the list.
+19/01/2026 MAW Simplified printing code - now honours user set margins etc.
 ------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.views;
@@ -19,7 +20,6 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.print.Book;
 import java.awt.print.PageFormat;
 import java.awt.print.Paper;
 import java.awt.print.Printable;
@@ -33,8 +33,6 @@ import java.security.AccessControlException;
 import java.text.MessageFormat;
 import java.util.List;
 
-import javax.print.attribute.HashPrintRequestAttributeSet;
-import javax.print.attribute.PrintRequestAttributeSet;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -49,7 +47,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
-import javax.swing.RepaintManager;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -568,6 +565,10 @@ public class ArmyListDBMEditorSwing {
 		private int mBottomMargin;
 
 		public int print(Graphics graphics, PageFormat pgFmt, int pgNbr) throws PrinterException {
+			if (pgNbr > 0) {
+				return(NO_SUCH_PAGE);
+			}
+				
 			log.info("About to print page {}.", pgNbr);
 
 			Graphics2D g2d = (Graphics2D)graphics;
@@ -870,45 +871,25 @@ public class ArmyListDBMEditorSwing {
 
 	//--------------------------------------------------------------------------
 	private void doButtonPrint(ActionEvent ae) {
+		final PrinterJob pj;
 		try {
-			PrintRequestAttributeSet prtRqsAttSet = new HashPrintRequestAttributeSet();
-			PrinterJob pj = null;
-			try {
-				pj = PrinterJob.getPrinterJob();
-			}
-			catch (AccessControlException ace) {
-				log.warn("Error trying to print:", ace);
-				JOptionPane.showMessageDialog(mPnlMain, "Sorry, you do not appear to have authority to print.","Printing Error",JOptionPane.WARNING_MESSAGE);
-				return;
-			}
-			Book bk = new Book();
-			int nbrOfPages = 1;
-			PagePrinter pp = new PagePrinter();
-			PageFormat pageFmt = pj.defaultPage();
-			bk.append(pp,pageFmt,nbrOfPages);
-			pj.setPageable(bk);
-			boolean ok = pj.printDialog(prtRqsAttSet);
-			if (ok) {
-				try {
-					log.info("About to print");
-					RepaintManager currentManager = RepaintManager.currentManager(mPnlMain);
-					boolean dblBuf = currentManager.isDoubleBufferingEnabled();
-					if (dblBuf) {
-						currentManager.setDoubleBufferingEnabled(false);
-					}
-					pj.print(prtRqsAttSet);
-					if (dblBuf) {
-						currentManager.setDoubleBufferingEnabled(true);
-					}
-				}	// try
-				catch (PrinterException pe) {
-					log.warn("Printer error.", pe);
-				}
-			}	// if - user said okay to print dialog
+			pj = PrinterJob.getPrinterJob();
+			pj.setPrintable(new PagePrinter());
 		}
-		catch (Exception e) {
-			log.warn("Error trying to print:", e);
-			JOptionPane.showMessageDialog(mPnlMain, e.toString(), "Printing Error", JOptionPane.WARNING_MESSAGE);
+		catch (AccessControlException ace) {
+			log.warn("Error trying to print:", ace);
+			JOptionPane.showMessageDialog(mPnlMain, "Sorry, you do not appear to have authority to print.","Printing Error",JOptionPane.WARNING_MESSAGE);
+			return;
+		}
+		final boolean ok = pj.printDialog();
+		if (ok) {
+			try {
+				pj.print();
+			}
+			catch (PrinterException pe) {
+				log.warn("Printer error:", pe);
+				JOptionPane.showMessageDialog(mPnlMain, "Sorry, there was a printing error: "+pe.getLocalizedMessage(),"Printing Error",JOptionPane.WARNING_MESSAGE);
+			}
 		}
 	}
 

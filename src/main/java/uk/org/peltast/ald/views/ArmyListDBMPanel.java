@@ -6,6 +6,12 @@ import java.awt.Component;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
+/** Utility class for the outer application panel
+*
+* @author MA Wheadon
+* @copyright MA Wheadon, 2026.
+* @licence MIT License.
+*/
 public class ArmyListDBMPanel extends JPanel {
 	private final ArmyListDBMEditorSwing mEditor;
 	enum Choice {YES, NO, CANCEL}

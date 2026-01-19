@@ -26,9 +26,9 @@ import org.slf4j.LoggerFactory;
  * footer section and a body section. You have to specify the total number of
  * columns you want. Columns cannot vary, you can add, remove and shift rows.
  *  
- * @author Mark Andrew Wheadon.
+ * @author MA Wheadon.
  * @date 11th June 2012.
- * @Copyright, Mark Andrew Wheadon, 2012, 2021.
+ * @Copyright, MA Wheadon, 2012, 2021.
  * @licence MIT License.
  */
 public class WTable {

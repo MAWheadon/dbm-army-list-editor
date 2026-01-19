@@ -7,7 +7,7 @@
 
 	<groupId>uk.org.peltast</groupId>
 	<artifactId>ald</artifactId>
-	<version>2025.12.04</version>
+	<version>2026.01.15</version>
 	<packaging>jar</packaging>
 
 	<name>ald</name>
@@ -31,18 +31,12 @@
 		<dependency>
 			<groupId>net.harawata</groupId>
 			<artifactId>appdirs</artifactId>
-			<version>1.2.1</version>
+			<version>1.5.0</version>
 		</dependency>
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
-			<version>1.3.14</version>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.graalvm.nativeimage/native-image-maven-plugin -->
-		<dependency>
-		    <groupId>org.graalvm.nativeimage</groupId>
-		    <artifactId>native-image-maven-plugin</artifactId>
-		    <version>20.3.12</version>
+			<version>1.3.16</version>
 		</dependency>
 	</dependencies>
 
@@ -71,48 +65,4 @@
 			</plugin>
 		</plugins>
 	</build>
- <profiles>
-     <profile>
-         <id>native</id>
-         <build>
-             <plugins>
-                 <plugin>
-                     <groupId>org.graalvm.buildtools</groupId>
-                     <artifactId>native-maven-plugin</artifactId>
-                     <version>${native.maven.plugin.version}</version>
-                     <extensions>true</extensions>
-                     <executions>
-                         <execution>
-                             <id>build-native</id>
-                             <goals>
-                                 <goal>build</goal>
-                             </goals>
-                             <phase>package</phase>
-                         </execution>
-                         <execution>
-                             <id>test-native</id>
-                             <goals>
-                                 <goal>test</goal>
-                             </goals>
-                             <phase>test</phase>
-                         </execution>
-                     </executions>
-                     <configuration>
-                         <fallback>false</fallback>
-                         <buildArgs>
-                             <arg>-H:DashboardDump=fortune -H:+DashboardAll</arg>
-                         </buildArgs>
-                         <agent>
-                             <enabled>true</enabled>
-                             <options>
-                                 <option>experimental-class-loader-support</option>
-                             </options>
-                         </agent>
-                     </configuration>
-                 </plugin>
-             </plugins>
-         </build>
-     </profile>
- </profiles>
-
 </project>

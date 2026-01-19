@@ -33,9 +33,9 @@ import org.xml.sax.helpers.DefaultHandler;
  * for ancient and medieval battles written by Phil Barker and Richard Bodley 
  * Scott (much appreciated to them both).
  * 
- * @author Mark Andrew Wheadon
+ * @author MA Wheadon
  * @date 6th November 2012.
- * @copyright Mark Andrew Wheadon, 2012,2020.
+ * @copyright MA Wheadon, 2012,2020.
  * @licence MIT License.
  */
 public class ArmyListCosts {

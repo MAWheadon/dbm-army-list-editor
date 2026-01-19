@@ -1,6 +1,8 @@
 /*------------------------------------------------------------------------------
 11/08/2022 MAW Added ability to copy armies.
 13/01/2026 MAW Improved About box. Fixed bug where closing did not detect army list changes.
+15/01/2026 MAW Added (and updated) VERSION constant.
+19/01/2026 MAW Added Updated VERSION constant and added attribution for directly used components.
 ------------------------------------------------------------------------------*/
 
 package uk.org.peltast.ald.views;
@@ -51,14 +53,15 @@ import uk.org.peltast.ald.views.ArmyListDBMPanel.Choice;
 
 /** Shows a list of all your army lists and allows you to edit them.
  * 
- * @author Mark Andrew Wheadon
+ * @author MA Wheadon
  * @date 16th June 2012.
- * @copyright Mark Andrew Wheadon, 2012,2021.
+ * @copyright MA Wheadon, 2012,2021.
  * @licence MIT License.
  */
 public class ArmyListDBMSwing implements ArmyIndexModelChange {
 	private static final Logger log = LoggerFactory.getLogger(ArmyListDBMSwing.class);
 	private static final String[] TABLE_COLUMNS = {"Group", "Name", "Book", "Year", "Points"};
+	private static final String VERSION = "2026.01.19";
 
 	private boolean mChanged = false;
 	private final String mDataDir;
@@ -121,8 +124,8 @@ public class ArmyListDBMSwing implements ArmyIndexModelChange {
 
 			mMenuItemAbout.addActionListener(e -> {
 				final String logPath = ArmyListModelUtils.getLogPath();
-				String str = MessageFormat.format("Version: {0}\nJava version: {1}\nData directory: {2}\nLog file: {3}",
-						"2025-12-04", System.getProperty("java.version"), mDataDir, logPath);
+				String str = MessageFormat.format("Version: {0}\nJava version: {1}\nData directory: {2}\nLog file: {3}\nLicence used: MIT Licence\nDirectly uses:\nnet.harawata.appdirs version 1.5.0\nch.qos.logback.logback-classic version 1.3.16",
+						VERSION, System.getProperty("java.version"), mDataDir, logPath);
 				JOptionPane.showMessageDialog(mFrame, str, "About", JOptionPane.INFORMATION_MESSAGE);
 			});
 

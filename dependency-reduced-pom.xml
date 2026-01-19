@@ -4,7 +4,7 @@
   <groupId>uk.org.peltast</groupId>
   <artifactId>ald</artifactId>
   <name>ald</name>
-  <version>2025.12.04</version>
+  <version>2026.01.15</version>
   <url>http://maven.apache.org</url>
   <build>
     <plugins>
@@ -29,49 +29,6 @@
       </plugin>
     </plugins>
   </build>
-  <profiles>
-    <profile>
-      <id>native</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.graalvm.buildtools</groupId>
-            <artifactId>native-maven-plugin</artifactId>
-            <version>${native.maven.plugin.version}</version>
-            <extensions>true</extensions>
-            <executions>
-              <execution>
-                <id>build-native</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>test-native</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>test</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <fallback>false</fallback>
-              <buildArgs>
-                <arg>-H:DashboardDump=fortune -H:+DashboardAll</arg>
-              </buildArgs>
-              <agent>
-                <enabled>true</enabled>
-                <options>
-                  <option>experimental-class-loader-support</option>
-                </options>
-              </agent>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>

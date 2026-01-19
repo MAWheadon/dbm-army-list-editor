@@ -11,6 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** Tests the costs file.
+*
+* @author MA Wheadon
+* @copyright MA Wheadon, 2026.
+* @licence MIT License.
+*/
 class ArmyListCostsTest {
 	private static final Logger log = LoggerFactory.getLogger(ArmyListCostsTest.class);
 	private static ArmyListCosts costs;

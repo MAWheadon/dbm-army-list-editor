@@ -35,9 +35,9 @@ import org.xml.sax.SAXException;
 /** Maintains an index of all your army lists together with useful information
  * extracted from each.
  * 
- * @author Mark Andrew Wheadon
+ * @author MA Wheadon
  * @date 6th August 2013.
- * @copyright Mark Andrew Wheadon, 2013,2020.
+ * @copyright MA Wheadon, 2013,2020.
  * @licence MIT License.
  */
 public class ArmyListIndex {

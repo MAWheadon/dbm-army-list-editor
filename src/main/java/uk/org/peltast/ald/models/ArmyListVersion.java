@@ -1,5 +1,11 @@
 package uk.org.peltast.ald.models;
 
+/** Encapsulates an army list version.
+*
+* @author MA Wheadon
+* @copyright MA Wheadon, 2026.
+* @licence MIT License.
+*/
 public class ArmyListVersion implements Comparable<ArmyListVersion> {
 	private final int mMajor;
 	private final int mMinor;

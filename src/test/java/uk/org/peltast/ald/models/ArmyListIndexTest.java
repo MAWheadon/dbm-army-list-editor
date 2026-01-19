@@ -17,6 +17,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
+/** Tests the index.
+*
+* @author MA Wheadon
+* @copyright MA Wheadon, 2026.
+* @licence MIT License.
+*/
 class ArmyListIndexTest {
 	private static final Logger log = LoggerFactory.getLogger(ArmyListIndexTest.class);
 	private static ArmyListIndex index;

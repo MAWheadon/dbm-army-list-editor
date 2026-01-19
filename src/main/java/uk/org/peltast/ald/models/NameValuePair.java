@@ -1,5 +1,11 @@
 package uk.org.peltast.ald.models;
 
+/** Handles name - value pairs.
+*
+* @author MA Wheadon
+* @copyright MA Wheadon, 2026.
+* @licence MIT License.
+*/
 public class NameValuePair {
 	private final String mName;
 	private final String mValue;
